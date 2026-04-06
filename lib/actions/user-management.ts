@@ -1,9 +1,10 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireFeatureAccess } from "@/lib/auth-guards";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { normalizeName } from "@/lib/utils";
 import { saveUserSchema } from "@/lib/validations/user-management";
 import type { ActionState } from "@/lib/actions/shared";
@@ -29,6 +30,12 @@ function buildSuccessState(message: string) {
 function revalidateMany(paths: readonly string[]) {
   for (const path of paths) {
     revalidatePath(path);
+  }
+}
+
+function revalidateTags(tags: readonly string[]) {
+  for (const tag of tags) {
+    revalidateTag(tag, "max");
   }
 }
 
@@ -143,6 +150,7 @@ export async function saveUserAction(
       });
 
       revalidateMany(USER_REVALIDATE_PATHS);
+      revalidateTags([CACHE_TAGS.users]);
       return buildSuccessState("Data pengguna berhasil diperbarui.");
     }
 
@@ -171,6 +179,7 @@ export async function saveUserAction(
     });
 
     revalidateMany(USER_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.users]);
     return buildSuccessState("Pengguna berhasil ditambahkan.");
   } catch (error) {
     return buildErrorState(
@@ -204,6 +213,7 @@ export async function deleteUserAction(id: string): Promise<ActionState> {
     });
 
     revalidateMany(USER_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.users]);
     return buildSuccessState("Pengguna berhasil dihapus.");
   } catch (error) {
     return buildErrorState(

@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { Prisma } from "@/src/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { requireKraniGardenFeature } from "@/lib/auth-guards";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { normalizeUppercase } from "@/lib/utils";
 import { deliveryReceiptSchema } from "@/lib/validations/krani";
 import type { ActionState } from "@/lib/actions/shared";
@@ -31,6 +32,12 @@ function buildErrorState(message: string, errors?: Record<string, string[]>) {
 function revalidateMany(paths: readonly string[]) {
   for (const path of paths) {
     revalidatePath(path);
+  }
+}
+
+function revalidateTags(tags: readonly string[]) {
+  for (const tag of tags) {
+    revalidateTag(tag, "max");
   }
 }
 
@@ -122,6 +129,7 @@ export async function createDeliveryReceiptAction(
     );
 
     revalidateMany(KRANI_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.deliveryReceipts, CACHE_TAGS.supplyOrders]);
 
     return { success: true, message: "Data penerimaan berhasil disimpan." };
   } catch (error) {

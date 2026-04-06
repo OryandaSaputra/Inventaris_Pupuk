@@ -1,4 +1,7 @@
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { getDeliveredQuantityMap } from "@/lib/delivery-receipts";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { prisma } from "@/lib/prisma";
 
 const JAKARTA_TIME_ZONE = "Asia/Jakarta";
@@ -49,187 +52,220 @@ function createRecentDayBuckets(days: number) {
   });
 }
 
-async function getGardenContext(gardenId: string) {
-  const garden = await prisma.garden.findUnique({
-    where: { id: gardenId },
-    select: {
-      id: true,
-      name: true,
-      code: true,
-    },
-  });
+const getCachedGardenContext = unstable_cache(
+  async (gardenId: string) => {
+    const garden = await prisma.garden.findUnique({
+      where: { id: gardenId },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+      },
+    });
 
-  if (!garden) {
-    throw new Error("Kebun user tidak ditemukan.");
-  }
+    if (!garden) {
+      throw new Error("Kebun user tidak ditemukan.");
+    }
 
-  return garden;
-}
+    return garden;
+  },
+  ["krani:garden-context"],
+  {
+    revalidate: 300,
+    tags: [CACHE_TAGS.masterData],
+  },
+);
+
+const getGardenContext = cache(async (gardenId: string) => {
+  return getCachedGardenContext(gardenId);
+});
+
+const getCachedKraniDashboardData = unstable_cache(
+  async (gardenId: string) => {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 16);
+
+    const [garden, orders, recentDeliveries, recentDeliverySeries] =
+      await Promise.all([
+        getGardenContext(gardenId),
+        prisma.supplyOrder.findMany({
+          where: { gardenId },
+          select: {
+            id: true,
+            quantityOrdered: true,
+          },
+        }),
+        prisma.deliveryReceipt.findMany({
+          where: {
+            supplyOrder: {
+              is: {
+                gardenId,
+              },
+            },
+          },
+          orderBy: [{ receivedDate: "desc" }, { createdAt: "desc" }],
+          take: 5,
+          include: {
+            supplyOrder: {
+              select: {
+                sp2bjNumber: true,
+                garden: {
+                  select: {
+                    name: true,
+                  },
+                },
+                fertilizerType: {
+                  select: {
+                    name: true,
+                  },
+                },
+                supplier: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        }),
+        prisma.deliveryReceipt.findMany({
+          where: {
+            receivedDate: {
+              gte: startDate,
+            },
+            supplyOrder: {
+              is: {
+                gardenId,
+              },
+            },
+          },
+          orderBy: { receivedDate: "asc" },
+          select: {
+            receivedDate: true,
+            quantityDelivered: true,
+          },
+        }),
+      ]);
+
+    const deliveredQuantityMap = await getDeliveredQuantityMap(
+      orders.map((order) => order.id),
+    );
+
+    const outstandingOrders = orders.map((order) => {
+      const totalDelivered = deliveredQuantityMap.get(order.id) ?? 0;
+      return Math.max(order.quantityOrdered - totalDelivered, 0);
+    });
+
+    const deliveryTrend = createRecentDayBuckets(7);
+    const deliveryTrendMap = new Map(
+      deliveryTrend.map((item) => [item.dateKey, item]),
+    );
+
+    for (const delivery of recentDeliverySeries) {
+      const key = getJakartaDateKey(delivery.receivedDate);
+      const bucket = deliveryTrendMap.get(key);
+
+      if (!bucket) {
+        continue;
+      }
+
+      bucket.totalDelivered += delivery.quantityDelivered;
+      bucket.deliveryCount += 1;
+    }
+
+    const todayKey = getJakartaDateKey(new Date());
+    const todayDelivered = deliveryTrendMap.get(todayKey)?.totalDelivered ?? 0;
+
+    return {
+      garden,
+      activeOrders: outstandingOrders.filter((item) => item > 0).length,
+      todayDelivered,
+      outstandingQuantity: outstandingOrders.reduce(
+        (total, item) => total + item,
+        0,
+      ),
+      recentDeliveries,
+      deliveryTrend,
+    };
+  },
+  ["krani:dashboard"],
+  {
+    revalidate: 300,
+    tags: [CACHE_TAGS.supplyOrders, CACHE_TAGS.deliveryReceipts, CACHE_TAGS.masterData],
+  },
+);
 
 export async function getKraniDashboardData(gardenId: string) {
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 16);
+  return getCachedKraniDashboardData(gardenId);
+}
 
-  const [garden, orders, recentDeliveries, recentDeliverySeries] =
-    await Promise.all([
+const getCachedKraniFormOptions = unstable_cache(
+  async (gardenId: string) => {
+    const [garden, orders] = await Promise.all([
       getGardenContext(gardenId),
       prisma.supplyOrder.findMany({
         where: { gardenId },
         select: {
           id: true,
           quantityOrdered: true,
-        },
-      }),
-      prisma.deliveryReceipt.findMany({
-        where: {
-          supplyOrder: {
-            is: {
-              gardenId,
-            },
-          },
-        },
-        orderBy: [{ receivedDate: "desc" }, { createdAt: "desc" }],
-        take: 5,
-        include: {
-          supplyOrder: {
+          sp2bjNumber: true,
+          garden: {
             select: {
-              sp2bjNumber: true,
-              garden: {
-                select: {
-                  name: true,
-                },
-              },
-              fertilizerType: {
-                select: {
-                  name: true,
-                },
-              },
-              supplier: {
-                select: {
-                  name: true,
-                },
-              },
+              id: true,
+              name: true,
+            },
+          },
+          fertilizerType: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          supplier: {
+            select: {
+              name: true,
             },
           },
         },
-      }),
-      prisma.deliveryReceipt.findMany({
-        where: {
-          receivedDate: {
-            gte: startDate,
-          },
-          supplyOrder: {
-            is: {
-              gardenId,
-            },
-          },
-        },
-        orderBy: { receivedDate: "asc" },
-        select: {
-          receivedDate: true,
-          quantityDelivered: true,
-        },
+        orderBy: { createdAt: "desc" },
       }),
     ]);
 
-  const deliveredQuantityMap = await getDeliveredQuantityMap(
-    orders.map((order) => order.id),
-  );
+    const deliveredQuantityMap = await getDeliveredQuantityMap(
+      orders.map((order) => order.id),
+    );
 
-  const outstandingOrders = orders.map((order) => {
-    const totalDelivered = deliveredQuantityMap.get(order.id) ?? 0;
-    return Math.max(order.quantityOrdered - totalDelivered, 0);
-  });
+    const options = orders
+      .map((order) => {
+        const delivered = deliveredQuantityMap.get(order.id) ?? 0;
 
-  const deliveryTrend = createRecentDayBuckets(7);
-  const deliveryTrendMap = new Map(
-    deliveryTrend.map((item) => [item.dateKey, item]),
-  );
+        return {
+          id: order.id,
+          gardenId: order.garden.id,
+          gardenName: order.garden.name,
+          fertilizerTypeId: order.fertilizerType.id,
+          fertilizerTypeName: order.fertilizerType.name,
+          supplierName: order.supplier.name,
+          sp2bjNumber: order.sp2bjNumber,
+          remainingQuantity: Math.max(order.quantityOrdered - delivered, 0),
+        };
+      })
+      .filter((order) => order.remainingQuantity > 0);
 
-  for (const delivery of recentDeliverySeries) {
-    const key = getJakartaDateKey(delivery.receivedDate);
-    const bucket = deliveryTrendMap.get(key);
-
-    if (!bucket) {
-      continue;
-    }
-
-    bucket.totalDelivered += delivery.quantityDelivered;
-    bucket.deliveryCount += 1;
-  }
-
-  const todayKey = getJakartaDateKey(new Date());
-  const todayDelivered = deliveryTrendMap.get(todayKey)?.totalDelivered ?? 0;
-
-  return {
-    garden,
-    activeOrders: outstandingOrders.filter((item) => item > 0).length,
-    todayDelivered,
-    outstandingQuantity: outstandingOrders.reduce(
-      (total, item) => total + item,
-      0,
-    ),
-    recentDeliveries,
-    deliveryTrend,
-  };
-}
+    return {
+      garden,
+      options,
+    };
+  },
+  ["krani:form-options"],
+  {
+    revalidate: 300,
+    tags: [CACHE_TAGS.supplyOrders, CACHE_TAGS.deliveryReceipts, CACHE_TAGS.masterData],
+  },
+);
 
 export async function getKraniFormOptions(gardenId: string) {
-  const [garden, orders] = await Promise.all([
-    getGardenContext(gardenId),
-    prisma.supplyOrder.findMany({
-      where: { gardenId },
-      select: {
-        id: true,
-        quantityOrdered: true,
-        sp2bjNumber: true,
-        garden: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        fertilizerType: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        supplier: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
-
-  const deliveredQuantityMap = await getDeliveredQuantityMap(
-    orders.map((order) => order.id),
-  );
-
-  const options = orders
-    .map((order) => {
-      const delivered = deliveredQuantityMap.get(order.id) ?? 0;
-
-      return {
-        id: order.id,
-        gardenId: order.garden.id,
-        gardenName: order.garden.name,
-        fertilizerTypeId: order.fertilizerType.id,
-        fertilizerTypeName: order.fertilizerType.name,
-        supplierName: order.supplier.name,
-        sp2bjNumber: order.sp2bjNumber,
-        remainingQuantity: Math.max(order.quantityOrdered - delivered, 0),
-      };
-    })
-    .filter((order) => order.remainingQuantity > 0);
-
-  return {
-    garden,
-    options,
-  };
+  return getCachedKraniFormOptions(gardenId);
 }
 
 export async function getDeliveryTableData(gardenId: string) {

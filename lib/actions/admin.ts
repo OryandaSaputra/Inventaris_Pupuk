@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { Prisma } from "@/src/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { requireFeatureAccess } from "@/lib/auth-guards";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { calculateSupplyCosts } from "@/lib/supply-order";
 import { normalizeName } from "@/lib/utils";
 import {
@@ -47,6 +48,12 @@ function buildSuccessState(message: string) {
 function revalidateMany(paths: readonly string[]) {
   for (const path of paths) {
     revalidatePath(path);
+  }
+}
+
+function revalidateTags(tags: readonly string[]) {
+  for (const tag of tags) {
+    revalidateTag(tag, "max");
   }
 }
 
@@ -241,6 +248,7 @@ export async function createSupplyOrderAction(
     );
 
     revalidateMany(ADMIN_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.supplyOrders]);
 
     return buildSuccessState("Data pasokan berhasil disimpan.");
   } catch (error) {
@@ -356,6 +364,7 @@ export async function updateSupplyOrderAction(
       `${ADMIN_ROUTES.supply.root}/${supplyOrderId}`,
       `${ADMIN_ROUTES.supply.root}/${supplyOrderId}/edit`,
     ]);
+    revalidateTags([CACHE_TAGS.supplyOrders]);
 
     return buildSuccessState("Data pasokan berhasil diperbarui.");
   } catch (error) {
@@ -365,7 +374,10 @@ export async function updateSupplyOrderAction(
   }
 }
 
-export async function deleteSupplyOrderAction(supplyOrderId: string) {
+export async function deleteSupplyOrderAction(
+  supplyOrderId: string,
+  _formData: FormData,
+): Promise<void> {
   const { user, permission } = await requireFeatureAccess(
     "canAccessSupplyList",
     "Tidak memiliki akses menghapus data pasokan.",
@@ -403,6 +415,7 @@ export async function deleteSupplyOrderAction(supplyOrderId: string) {
       `${ADMIN_ROUTES.supply.root}/${supplyOrderId}`,
       `${ADMIN_ROUTES.supply.root}/${supplyOrderId}/edit`,
     ]);
+    revalidateTags([CACHE_TAGS.supplyOrders]);
   } catch (error) {
     throw new Error(
       getPrismaErrorMessage(error) ?? "Gagal menghapus data pasokan.",
@@ -448,7 +461,12 @@ export async function saveGardenAction(
       }
 
       if (
-        !canAccessGardenAction(permission, "edit", user.assignedGardenId, data.id)
+        !canAccessGardenAction(
+          permission,
+          "edit",
+          user.assignedGardenId,
+          data.id,
+        )
       ) {
         return buildErrorState(
           "Role Anda tidak memiliki akses edit untuk data kebun ini.",
@@ -466,6 +484,7 @@ export async function saveGardenAction(
       });
 
       revalidateMany(ADMIN_REVALIDATE_PATHS);
+      revalidateTags([CACHE_TAGS.masterData, CACHE_TAGS.supplyOrders]);
       return buildSuccessState("Data kebun berhasil diperbarui.");
     }
 
@@ -485,6 +504,7 @@ export async function saveGardenAction(
     });
 
     revalidateMany(ADMIN_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.masterData, CACHE_TAGS.supplyOrders]);
     return buildSuccessState("Data kebun berhasil ditambahkan.");
   } catch (error) {
     return buildErrorState(
@@ -500,13 +520,17 @@ export async function deleteGardenAction(id: string): Promise<ActionState> {
   );
 
   try {
-    if (!canAccessGardenAction(permission, "delete", user.assignedGardenId, id)) {
+    if (
+      !canAccessGardenAction(permission, "delete", user.assignedGardenId, id)
+    ) {
       return buildErrorState(
         "Role Anda tidak memiliki akses hapus untuk data kebun ini.",
       );
     }
 
-    const usageCount = await prisma.supplyOrder.count({ where: { gardenId: id } });
+    const usageCount = await prisma.supplyOrder.count({
+      where: { gardenId: id },
+    });
 
     if (usageCount > 0) {
       return buildErrorState(
@@ -516,6 +540,7 @@ export async function deleteGardenAction(id: string): Promise<ActionState> {
 
     await prisma.garden.delete({ where: { id } });
     revalidateMany(ADMIN_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.masterData, CACHE_TAGS.supplyOrders]);
     return buildSuccessState("Data kebun berhasil dihapus.");
   } catch (error) {
     return buildErrorState(
@@ -559,6 +584,7 @@ export async function saveFertilizerAction(
       });
 
       revalidateMany(ADMIN_REVALIDATE_PATHS);
+      revalidateTags([CACHE_TAGS.masterData, CACHE_TAGS.supplyOrders]);
       return buildSuccessState("Data pupuk berhasil diperbarui.");
     }
 
@@ -570,6 +596,7 @@ export async function saveFertilizerAction(
     });
 
     revalidateMany(ADMIN_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.masterData, CACHE_TAGS.supplyOrders]);
     return buildSuccessState("Data pupuk berhasil ditambahkan.");
   } catch (error) {
     return buildErrorState(
@@ -597,6 +624,7 @@ export async function deleteFertilizerAction(id: string): Promise<ActionState> {
 
     await prisma.fertilizerType.delete({ where: { id } });
     revalidateMany(ADMIN_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.masterData, CACHE_TAGS.supplyOrders]);
     return buildSuccessState("Data pupuk berhasil dihapus.");
   } catch (error) {
     return buildErrorState(
@@ -646,6 +674,7 @@ export async function saveSupplierAction(
       });
 
       revalidateMany(ADMIN_REVALIDATE_PATHS);
+      revalidateTags([CACHE_TAGS.masterData, CACHE_TAGS.supplyOrders]);
       return buildSuccessState("Data supplier berhasil diperbarui.");
     }
 
@@ -660,6 +689,7 @@ export async function saveSupplierAction(
     });
 
     revalidateMany(ADMIN_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.masterData, CACHE_TAGS.supplyOrders]);
     return buildSuccessState("Data supplier berhasil ditambahkan.");
   } catch (error) {
     return buildErrorState(
@@ -687,6 +717,7 @@ export async function deleteSupplierAction(id: string): Promise<ActionState> {
 
     await prisma.supplier.delete({ where: { id } });
     revalidateMany(ADMIN_REVALIDATE_PATHS);
+    revalidateTags([CACHE_TAGS.masterData, CACHE_TAGS.supplyOrders]);
     return buildSuccessState("Data supplier berhasil dihapus.");
   } catch (error) {
     return buildErrorState(

@@ -6,6 +6,16 @@ import { loginSchema } from "@/lib/validations/auth";
 
 type AppRole = "ADMIN" | "KRANI_TANAMAN" | "KRANI_KEBUN";
 
+type AuthUserPayload = {
+  id: string;
+  name: string;
+  email: string;
+  role: AppRole;
+  isActive: boolean;
+  assignedGardenId: string | null;
+  assignedGardenName: string | null;
+};
+
 function toNullableString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
@@ -28,6 +38,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 60 * 60 * 8,
+    updateAge: 60 * 30,
   },
   providers: [
     Credentials({
@@ -46,10 +58,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            passwordHash: true,
+            role: true,
+            isActive: true,
+            assignedGardenId: true,
             assignedGarden: {
               select: {
-                id: true,
                 name: true,
               },
             },
@@ -77,51 +95,25 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           isActive: user.isActive,
           assignedGardenId: user.assignedGardenId,
           assignedGardenName: user.assignedGarden?.name ?? null,
-        };
+        } satisfies AuthUserPayload;
       },
     }),
   ],
   callbacks: {
     jwt: async ({ token, user }) => {
-      const userId =
-        typeof user?.id === "string" && user.id.length > 0
-          ? user.id
-          : token.sub;
-
-      if (!userId) {
+      if (!user) {
         return token;
       }
 
-      const dbUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          isActive: true,
-          assignedGardenId: true,
-          assignedGarden: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      });
+      const authUser = user as AuthUserPayload;
 
-      if (!dbUser) {
-        token.isActive = false;
-        token.assignedGardenId = null;
-        token.assignedGardenName = null;
-        return token;
-      }
-
-      token.name = dbUser.name;
-      token.email = dbUser.email;
-      token.role = dbUser.role as AppRole;
-      token.isActive = dbUser.isActive;
-      token.assignedGardenId = dbUser.assignedGardenId;
-      token.assignedGardenName = dbUser.assignedGarden?.name ?? null;
+      token.sub = authUser.id;
+      token.name = authUser.name;
+      token.email = authUser.email;
+      token.role = authUser.role;
+      token.isActive = authUser.isActive;
+      token.assignedGardenId = authUser.assignedGardenId;
+      token.assignedGardenName = authUser.assignedGardenName;
 
       return token;
     },

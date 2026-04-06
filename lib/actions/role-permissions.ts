@@ -1,10 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { UserRole } from "@/src/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { requireFeatureAccess } from "@/lib/auth-guards";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import type { ActionState } from "@/lib/actions/shared";
 import { ADMIN_ROUTES, KRANI_ROUTES } from "@/lib/routes";
 import {
@@ -136,6 +137,7 @@ function revalidatePermissionPages() {
   revalidatePath(ADMIN_ROUTES.home);
   revalidatePath(KRANI_ROUTES.home);
   revalidatePath(KRANI_ROUTES.delivery);
+  revalidateTag(CACHE_TAGS.rolePermissions, "max");
 }
 
 export async function saveRolePermissionAction(

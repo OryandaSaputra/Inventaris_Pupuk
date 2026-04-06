@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { LogOut, Sparkles } from "lucide-react";
-import { auth, signOut } from "@/auth";
+import { signOut } from "@/auth";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { Sidebar } from "@/components/layout/sidebar";
 import {
@@ -9,7 +9,7 @@ import {
   type AppUserRole,
 } from "@/components/layout/navigation-config";
 import { Button } from "@/components/ui/button";
-import { getRolePermissionForRole } from "@/lib/data/role-permissions";
+import { getCurrentUserAccess } from "@/lib/session";
 import {
   canAccessFeature,
   getFirstAllowedPath,
@@ -28,22 +28,20 @@ export async function AppShell({
   children: ReactNode;
   pathname: string;
 }) {
-  const session = await auth();
+  const { user, permission } = await getCurrentUserAccess();
 
-  if (!session?.user || !session.user.isActive) {
+  if (!user || !permission) {
     redirect("/login");
   }
 
-  const role = session.user.role as AppUserRole;
-  const permission = await getRolePermissionForRole(role);
+  const role = user.role as AppUserRole;
   const routeFeature = getRouteFeatureKey(pathname);
 
   if (routeFeature && !canAccessFeature(permission, routeFeature)) {
     redirect(getFirstAllowedPath(role, permission));
   }
 
-  const displayName =
-    session.user.name?.trim() || session.user.email || "Pengguna";
+  const displayName = user.name?.trim() || user.email || "Pengguna";
 
   return (
     <div className="min-h-screen text-slate-100 lg:grid lg:grid-cols-[18.5rem_minmax(0,1fr)] xl:grid-cols-[19.5rem_minmax(0,1fr)]">

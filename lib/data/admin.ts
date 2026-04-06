@@ -1,5 +1,7 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { getDeliveredQuantityMap } from "@/lib/delivery-receipts";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { prisma } from "@/lib/prisma";
 import { getSupplyOrderMetrics } from "@/lib/supply-order";
 import { decimalToNumber } from "@/lib/utils";
@@ -197,78 +199,111 @@ function mapSupplyOrderRow(
   };
 }
 
+const getCachedAdminSupplyOrdersWithMetrics = unstable_cache(
+  async () => {
+    const orders = await prisma.supplyOrder.findMany({
+      select: supplyOrderListSelect,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const deliveredQuantityMap = await getDeliveredQuantityMap(
+      orders.map((order) => order.id),
+    );
+
+    return orders.map((order) => mapSupplyOrderRow(order, deliveredQuantityMap));
+  },
+  ["admin:supply-orders-with-metrics"],
+  {
+    revalidate: 300,
+    tags: [CACHE_TAGS.supplyOrders, CACHE_TAGS.deliveryReceipts],
+  },
+);
+
 const getAdminSupplyOrdersWithMetrics = cache(async () => {
-  const orders = await prisma.supplyOrder.findMany({
-    select: supplyOrderListSelect,
-    orderBy: { createdAt: "desc" },
-  });
-
-  const deliveredQuantityMap = await getDeliveredQuantityMap(
-    orders.map((order) => order.id),
-  );
-
-  return orders.map((order) => mapSupplyOrderRow(order, deliveredQuantityMap));
+  return getCachedAdminSupplyOrdersWithMetrics();
 });
 
-export async function getSupplyOrderFormOptions() {
-  const [gardens, fertilizerTypes, suppliers] = await Promise.all([
-    prisma.garden.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: { name: true },
-    }),
-    prisma.fertilizerType.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: { name: true },
-    }),
-    prisma.supplier.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: { name: true },
-    }),
-  ]);
+const getCachedSupplyOrderFormOptions = unstable_cache(
+  async () => {
+    const [gardens, fertilizerTypes, suppliers] = await Promise.all([
+      prisma.garden.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { name: true },
+      }),
+      prisma.fertilizerType.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { name: true },
+      }),
+      prisma.supplier.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { name: true },
+      }),
+    ]);
 
-  return {
-    gardens: gardens.map((item) => item.name),
-    fertilizerTypes: fertilizerTypes.map((item) => item.name),
-    suppliers: suppliers.map((item) => item.name),
-  };
+    return {
+      gardens: gardens.map((item) => item.name),
+      fertilizerTypes: fertilizerTypes.map((item) => item.name),
+      suppliers: suppliers.map((item) => item.name),
+    };
+  },
+  ["admin:supply-order-form-options"],
+  {
+    revalidate: 300,
+    tags: [CACHE_TAGS.masterData],
+  },
+);
+
+export async function getSupplyOrderFormOptions() {
+  return getCachedSupplyOrderFormOptions();
 }
 
-export const getAdminDeliveryTrendData = cache(async (days = 14) => {
-  const buckets = createRecentDayBuckets(days);
-  const bucketMap = new Map(buckets.map((bucket) => [bucket.dateKey, bucket]));
+const getCachedAdminDeliveryTrendData = unstable_cache(
+  async (days: number) => {
+    const buckets = createRecentDayBuckets(days);
+    const bucketMap = new Map(buckets.map((bucket) => [bucket.dateKey, bucket]));
 
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - (days + 2));
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (days + 2));
 
-  const deliveries = await prisma.deliveryReceipt.findMany({
-    where: {
-      receivedDate: {
-        gte: startDate,
+    const deliveries = await prisma.deliveryReceipt.findMany({
+      where: {
+        receivedDate: {
+          gte: startDate,
+        },
       },
-    },
-    select: {
-      receivedDate: true,
-      quantityDelivered: true,
-    },
-    orderBy: { receivedDate: "asc" },
-  });
+      select: {
+        receivedDate: true,
+        quantityDelivered: true,
+      },
+      orderBy: { receivedDate: "asc" },
+    });
 
-  for (const delivery of deliveries) {
-    const key = getJakartaDateKey(delivery.receivedDate);
-    const bucket = bucketMap.get(key);
+    for (const delivery of deliveries) {
+      const key = getJakartaDateKey(delivery.receivedDate);
+      const bucket = bucketMap.get(key);
 
-    if (!bucket) {
-      continue;
+      if (!bucket) {
+        continue;
+      }
+
+      bucket.totalDelivered += delivery.quantityDelivered;
+      bucket.deliveryCount += 1;
     }
 
-    bucket.totalDelivered += delivery.quantityDelivered;
-    bucket.deliveryCount += 1;
-  }
+    return buckets;
+  },
+  ["admin:delivery-trend"],
+  {
+    revalidate: 300,
+    tags: [CACHE_TAGS.deliveryReceipts],
+  },
+);
 
-  return buckets;
+export const getAdminDeliveryTrendData = cache(async (days = 14) => {
+  return getCachedAdminDeliveryTrendData(days);
 });
 
 export function getSupplierPerformanceData(rows: AdminSupplyOrderRow[]) {

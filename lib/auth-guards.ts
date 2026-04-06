@@ -1,7 +1,6 @@
 import type { Session } from "next-auth";
-import { auth } from "@/auth";
 import type { UserRole } from "@/src/generated/prisma";
-import { getRolePermissionForRole } from "@/lib/data/role-permissions";
+import { getCurrentUserAccess } from "@/lib/session";
 import type {
   FeaturePermissionKey,
   ResolvedRolePermission,
@@ -16,10 +15,9 @@ type AuthenticatedUser = NonNullable<Session["user"]>;
 async function getAuthenticatedUser(
   message = "Tidak memiliki akses.",
 ): Promise<AuthenticatedUser> {
-  const session = await auth();
-  const user = session?.user;
+  const { user } = await getCurrentUserAccess();
 
-  if (!user || !user.isActive) {
+  if (!user) {
     throw new Error(message);
   }
 
@@ -72,10 +70,9 @@ export async function requireFeatureAccess(
   user: AuthenticatedUser;
   permission: ResolvedRolePermission;
 }> {
-  const user = await getAuthenticatedUser(message);
-  const permission = await getRolePermissionForRole(user.role as UserRole);
+  const { user, permission } = await getCurrentUserAccess();
 
-  if (!canAccessFeature(permission, featureKey)) {
+  if (!user || !permission || !canAccessFeature(permission, featureKey)) {
     throw new Error(message);
   }
 
@@ -116,9 +113,9 @@ export async function requireKraniGardenFeature(
   permission: ResolvedRolePermission;
 }> {
   const user = await requireKraniAssignedGarden(message);
-  const permission = await getRolePermissionForRole(user.role as UserRole);
+  const { permission } = await getCurrentUserAccess();
 
-  if (!canAccessFeature(permission, featureKey)) {
+  if (!permission || !canAccessFeature(permission, featureKey)) {
     throw new Error(message);
   }
 

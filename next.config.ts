@@ -9,9 +9,13 @@ const nextConfig: NextConfig = {
     "prisma",
     "bcryptjs",
   ],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "recharts"],
+  },
   turbopack: {
     root: path.resolve(__dirname),
   },
 };
 
 export default nextConfig;
+
