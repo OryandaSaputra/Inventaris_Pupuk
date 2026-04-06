@@ -89,7 +89,7 @@ export function SupplierPerformanceChart({
   rows,
   limit = 6,
   title = "Performa Pemasok",
-  description = "Perbandingan volume kontrak, pengiriman, outstanding, dan fill rate per pemasok.",
+  // description = "Perbandingan volume kontrak, pengiriman, outstanding, dan fill rate per pemasok.",
 }: {
   rows: SupplierPerformanceRow[];
   limit?: number;
@@ -104,7 +104,7 @@ export function SupplierPerformanceChart({
         <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            {/* <CardDescription>{description}</CardDescription> */}
           </div>
 
           <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[360px]">
