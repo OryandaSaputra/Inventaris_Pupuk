@@ -1,0 +1,6 @@
+DO $$
+BEGIN
+  ALTER TYPE "UserRole" ADD VALUE 'KRANI_KEBUN';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

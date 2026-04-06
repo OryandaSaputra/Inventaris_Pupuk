@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  KRANI_TANAMAN
+  KRANI_KEBUN
+}
+
+enum SupplyBudgetType {
+  EKSPLOITASI
+  INVESTASI
+}
+
+enum GardenAccessScope {
+  NONE
+  ASSIGNED
+  ALL
+}
+
+model User {
+  id                String            @id @default(cuid())
+  name              String
+  email             String            @unique
+  passwordHash      String
+  role              UserRole
+  isActive          Boolean           @default(true)
+  assignedGardenId  String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  assignedGarden    Garden?           @relation("AssignedGardenUsers", fields: [assignedGardenId], references: [id], onDelete: SetNull)
+  createdSupply     SupplyOrder[]     @relation("SupplyOrderCreatedBy")
+  createdDeliveries DeliveryReceipt[] @relation("DeliveryCreatedBy")
+
+  @@index([assignedGardenId])
+}
+
+model RolePermission {
+  role                       UserRole           @id
+  gardenViewScope            GardenAccessScope  @default(NONE)
+  gardenEditScope            GardenAccessScope  @default(NONE)
+  gardenDeleteScope          GardenAccessScope  @default(NONE)
+
+  canAccessAdminHome         Boolean            @default(false)
+  canAccessSupplyInput       Boolean            @default(false)
+  canAccessSupplyList        Boolean            @default(false)
+  canAccessMasterGardens     Boolean            @default(false)
+  canAccessMasterFertilizers Boolean            @default(false)
+  canAccessMasterSuppliers   Boolean            @default(false)
+  canAccessSupplierInformation Boolean          @default(false)
+  canAccessUserManagement    Boolean            @default(false)
+
+  canAccessKraniHome         Boolean            @default(false)
+  canAccessDeliveryWorkspace Boolean            @default(false)
+
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
+}
+
+model Garden {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  code          String        @unique
+  address       String?
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  supplyOrders  SupplyOrder[]
+  assignedUsers User[]        @relation("AssignedGardenUsers")
+}
+
+model FertilizerType {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  unit         String        @default("kg")
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  supplyOrders SupplyOrder[]
+}
+
+model Supplier {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  contactName  String?
+  address      String?
+  phone        String?
+  email        String?       @unique
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  supplyOrders SupplyOrder[]
+}
+
+model SupplyOrder {
+  id                String             @id @default(cuid())
+  gardenId          String
+  fertilizerTypeId  String
+  supplierId        String
+  sp2bjNumber       String
+  contractStartDate DateTime
+  contractEndDate   DateTime
+  quantityOrdered   Int
+  budgetType        SupplyBudgetType
+  unitPrice         Decimal            @db.Decimal(18, 2)
+  freightCost       Decimal            @db.Decimal(18, 2)
+  totalCost         Decimal            @db.Decimal(18, 2)
+  ppnAmount         Decimal            @db.Decimal(18, 2)
+  grandTotal        Decimal            @db.Decimal(18, 2)
+  createdById       String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  garden            Garden             @relation(fields: [gardenId], references: [id])
+  fertilizerType    FertilizerType     @relation(fields: [fertilizerTypeId], references: [id])
+  supplier          Supplier           @relation(fields: [supplierId], references: [id])
+  createdBy         User               @relation("SupplyOrderCreatedBy", fields: [createdById], references: [id])
+  deliveries        DeliveryReceipt[]
+
+  @@unique([gardenId, fertilizerTypeId, sp2bjNumber])
+  @@index([gardenId])
+  @@index([fertilizerTypeId])
+  @@index([supplierId])
+  @@index([sp2bjNumber])
+  @@index([createdAt])
+  @@index([contractEndDate])
+  @@index([gardenId, contractEndDate])
+}
+
+model DeliveryReceipt {
+  id                String      @id @default(cuid())
+  supplyOrderId     String
+  licensePlate      String
+  receivedDate      DateTime
+  quantityDelivered Int
+  sackCount         Int
+  createdById       String
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  supplyOrder       SupplyOrder @relation(fields: [supplyOrderId], references: [id], onDelete: Cascade)
+  createdBy         User        @relation("DeliveryCreatedBy", fields: [createdById], references: [id])
+
+  @@index([supplyOrderId])
+  @@index([receivedDate])
+  @@index([createdById])
+  @@index([supplyOrderId, receivedDate])
+}
