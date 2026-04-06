@@ -1,7 +1,11 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, SupplyBudgetType, UserRole } from "../src/generated/prisma";
+import {
+  PrismaClient,
+  SupplyBudgetType,
+  UserRole,
+} from "../src/generated/prisma";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -53,8 +57,15 @@ async function main() {
 
   const gardenA = await prisma.garden.upsert({
     where: { name: "Kebun A" },
-    update: { isActive: true },
-    create: { name: "Kebun A", isActive: true },
+    update: {
+      code: "KBA",
+      isActive: true,
+    },
+    create: {
+      name: "Kebun A",
+      code: "KBA",
+      isActive: true,
+    },
   });
 
   const fertilizerA = await prisma.fertilizerType.upsert({
