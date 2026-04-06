@@ -1,12 +1,20 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  getNextSortState,
+  sortRows,
+  type SortState,
+} from "@/lib/table-sort";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 export type DeliveryTableRow = {
@@ -23,6 +31,17 @@ export type DeliveryTableRow = {
   };
   createdBy: { name: string };
 };
+
+type DeliverySortKey =
+  | "garden"
+  | "fertilizer"
+  | "sp2bj"
+  | "supplier"
+  | "licensePlate"
+  | "receivedDate"
+  | "quantityDelivered"
+  | "sackCount"
+  | "createdBy";
 
 function MobileDeliveryCard({ row }: { row: DeliveryTableRow }) {
   return (
@@ -94,6 +113,28 @@ function MobileDeliveryCard({ row }: { row: DeliveryTableRow }) {
 }
 
 export function DeliveryTable({ rows }: { rows: DeliveryTableRow[] }) {
+  const [sortState, setSortState] = useState<SortState<DeliverySortKey>>(null);
+
+  const sortedRows = useMemo(
+    () =>
+      sortRows(rows, sortState, {
+        garden: (row) => row.supplyOrder.garden.name,
+        fertilizer: (row) => row.supplyOrder.fertilizerType.name,
+        sp2bj: (row) => row.supplyOrder.sp2bjNumber,
+        supplier: (row) => row.supplyOrder.supplier.name,
+        licensePlate: (row) => row.licensePlate,
+        receivedDate: (row) => row.receivedDate,
+        quantityDelivered: (row) => row.quantityDelivered,
+        sackCount: (row) => row.sackCount,
+        createdBy: (row) => row.createdBy.name,
+      }),
+    [rows, sortState],
+  );
+
+  function toggleSort(key: DeliverySortKey) {
+    setSortState((current) => getNextSortState(current, key));
+  }
+
   return (
     <Card>
       <CardHeader className="gap-3">
@@ -106,7 +147,7 @@ export function DeliveryTable({ rows }: { rows: DeliveryTableRow[] }) {
       </CardHeader>
 
       <CardContent>
-        {rows.length === 0 ? (
+        {sortedRows.length === 0 ? (
           <div className="rounded-[28px] border border-dashed border-white/65 bg-white/55 px-6 py-12 text-center">
             <p className="text-base font-medium text-slate-900">
               Belum ada data penerimaan pupuk.
@@ -117,8 +158,13 @@ export function DeliveryTable({ rows }: { rows: DeliveryTableRow[] }) {
           </div>
         ) : (
           <>
+            <div className="mb-4 text-sm text-slate-600">
+              Klik judul kolom untuk mengurutkan data penerimaan berdasarkan kebun,
+              supplier, tanggal, atau volume.
+            </div>
+
             <div className="grid gap-4 xl:hidden">
-              {rows.map((row) => (
+              {sortedRows.map((row) => (
                 <MobileDeliveryCard key={row.id} row={row} />
               ))}
             </div>
@@ -127,20 +173,67 @@ export function DeliveryTable({ rows }: { rows: DeliveryTableRow[] }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Kebun</TableHead>
-                    <TableHead>Jenis Pupuk</TableHead>
-                    <TableHead>No SP2BJ</TableHead>
-                    <TableHead>Pemasok</TableHead>
-                    <TableHead>No Polisi</TableHead>
-                    <TableHead>Tgl Penerimaan</TableHead>
-                    <TableHead className="text-right">Jumlah Pengiriman</TableHead>
-                    <TableHead className="text-right">Jumlah Sak</TableHead>
-                    <TableHead>Input Oleh</TableHead>
+                    <SortableTableHead
+                      label="Kebun"
+                      isActive={sortState?.key === "garden"}
+                      direction={sortState?.key === "garden" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("garden")}
+                    />
+                    <SortableTableHead
+                      label="Jenis Pupuk"
+                      isActive={sortState?.key === "fertilizer"}
+                      direction={sortState?.key === "fertilizer" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("fertilizer")}
+                    />
+                    <SortableTableHead
+                      label="No SP2BJ"
+                      isActive={sortState?.key === "sp2bj"}
+                      direction={sortState?.key === "sp2bj" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("sp2bj")}
+                    />
+                    <SortableTableHead
+                      label="Pemasok"
+                      isActive={sortState?.key === "supplier"}
+                      direction={sortState?.key === "supplier" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("supplier")}
+                    />
+                    <SortableTableHead
+                      label="No Polisi"
+                      isActive={sortState?.key === "licensePlate"}
+                      direction={sortState?.key === "licensePlate" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("licensePlate")}
+                    />
+                    <SortableTableHead
+                      label="Tgl Penerimaan"
+                      isActive={sortState?.key === "receivedDate"}
+                      direction={sortState?.key === "receivedDate" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("receivedDate")}
+                    />
+                    <SortableTableHead
+                      label="Jumlah Pengiriman"
+                      align="right"
+                      isActive={sortState?.key === "quantityDelivered"}
+                      direction={sortState?.key === "quantityDelivered" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("quantityDelivered")}
+                    />
+                    <SortableTableHead
+                      label="Jumlah Sak"
+                      align="right"
+                      isActive={sortState?.key === "sackCount"}
+                      direction={sortState?.key === "sackCount" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("sackCount")}
+                    />
+                    <SortableTableHead
+                      label="Input Oleh"
+                      isActive={sortState?.key === "createdBy"}
+                      direction={sortState?.key === "createdBy" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("createdBy")}
+                    />
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                  {rows.map((row) => (
+                  {sortedRows.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="font-medium text-slate-900">
                         {row.supplyOrder.garden.name}

@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -5,16 +8,31 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import type { SupplierPerformanceRow } from "@/components/charts/supplier-performance-chart";
+import {
+  getNextSortState,
+  sortRows,
+  type SortState,
+} from "@/lib/table-sort";
 import { formatNumber } from "@/lib/utils";
+
+type SupplierInfoSortKey =
+  | "supplierName"
+  | "totalContractQuantity"
+  | "totalDeliveredQuantity"
+  | "outstandingQuantity"
+  | "fillRate"
+  | "activeContracts"
+  | "completedContracts"
+  | "status";
 
 function FillRateBar({ value }: { value: number }) {
   return (
@@ -105,18 +123,39 @@ export function SupplierInformationTable({
 }: {
   rows: SupplierPerformanceRow[];
 }) {
+  const [sortState, setSortState] = useState<SortState<SupplierInfoSortKey>>(null);
+
+  const sortedRows = useMemo(
+    () =>
+      sortRows(rows, sortState, {
+        supplierName: (row) => row.supplierName,
+        totalContractQuantity: (row) => row.totalContractQuantity,
+        totalDeliveredQuantity: (row) => row.totalDeliveredQuantity,
+        outstandingQuantity: (row) => row.outstandingQuantity,
+        fillRate: (row) => row.fillRate,
+        activeContracts: (row) => row.activeContracts,
+        completedContracts: (row) => row.completedContracts,
+        status: (row) => row.outstandingQuantity <= 0,
+      }),
+    [rows, sortState],
+  );
+
+  function toggleSort(key: SupplierInfoSortKey) {
+    setSortState((current) => getNextSortState(current, key));
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Rekap Supplier</CardTitle>
         <CardDescription>
           Gunakan tabel ini untuk membandingkan volume kontrak, realisasi,
-          outstanding, dan status setiap pemasok.
+          outstanding, dan status setiap pemasok. Klik judul kolom untuk sort.
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        {rows.length === 0 ? (
+        {sortedRows.length === 0 ? (
           <div className="flex min-h-[220px] items-center justify-center rounded-3xl border border-dashed border-white/65 bg-white/70 px-6 py-10 text-center">
             <div>
               <p className="text-sm font-semibold text-slate-900">
@@ -130,7 +169,7 @@ export function SupplierInformationTable({
         ) : (
           <>
             <div className="grid gap-3 lg:hidden">
-              {rows.map((row) => (
+              {sortedRows.map((row) => (
                 <SupplierMobileCard key={row.supplierName} row={row} />
               ))}
             </div>
@@ -139,19 +178,64 @@ export function SupplierInformationTable({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead className="text-right">Total Kontrak</TableHead>
-                    <TableHead className="text-right">Terkirim</TableHead>
-                    <TableHead className="text-right">Outstanding</TableHead>
-                    <TableHead>Fill Rate</TableHead>
-                    <TableHead className="text-right">Kontrak Aktif</TableHead>
-                    <TableHead className="text-right">Selesai</TableHead>
-                    <TableHead>Status</TableHead>
+                    <SortableTableHead
+                      label="Supplier"
+                      isActive={sortState?.key === "supplierName"}
+                      direction={sortState?.key === "supplierName" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("supplierName")}
+                    />
+                    <SortableTableHead
+                      label="Total Kontrak"
+                      align="right"
+                      isActive={sortState?.key === "totalContractQuantity"}
+                      direction={sortState?.key === "totalContractQuantity" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("totalContractQuantity")}
+                    />
+                    <SortableTableHead
+                      label="Terkirim"
+                      align="right"
+                      isActive={sortState?.key === "totalDeliveredQuantity"}
+                      direction={sortState?.key === "totalDeliveredQuantity" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("totalDeliveredQuantity")}
+                    />
+                    <SortableTableHead
+                      label="Outstanding"
+                      align="right"
+                      isActive={sortState?.key === "outstandingQuantity"}
+                      direction={sortState?.key === "outstandingQuantity" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("outstandingQuantity")}
+                    />
+                    <SortableTableHead
+                      label="Fill Rate"
+                      isActive={sortState?.key === "fillRate"}
+                      direction={sortState?.key === "fillRate" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("fillRate")}
+                    />
+                    <SortableTableHead
+                      label="Kontrak Aktif"
+                      align="right"
+                      isActive={sortState?.key === "activeContracts"}
+                      direction={sortState?.key === "activeContracts" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("activeContracts")}
+                    />
+                    <SortableTableHead
+                      label="Selesai"
+                      align="right"
+                      isActive={sortState?.key === "completedContracts"}
+                      direction={sortState?.key === "completedContracts" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("completedContracts")}
+                    />
+                    <SortableTableHead
+                      label="Status"
+                      isActive={sortState?.key === "status"}
+                      direction={sortState?.key === "status" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("status")}
+                    />
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                  {rows.map((row) => (
+                  {sortedRows.map((row) => (
                     <TableRow key={row.supplierName}>
                       <TableCell className="align-top">
                         <div className="min-w-[200px]">

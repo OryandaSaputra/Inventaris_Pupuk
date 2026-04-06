@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import {
   CalendarClock,
   PackageCheck,
@@ -21,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
   Table,
   TableBody,
@@ -30,6 +34,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getBudgetTypeLabel } from "@/lib/supply-order";
+import {
+  getNextSortState,
+  sortRows,
+  type SortState,
+} from "@/lib/table-sort";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 
 export type SupplyOrderTableRow = {
@@ -62,6 +71,27 @@ type SupplyOrderTableProps = {
   maxRows?: number;
 };
 
+
+type HomeSortKey =
+  | "contract"
+  | "garden"
+  | "fertilizer"
+  | "supplier"
+  | "progress"
+  | "remainingQuantity"
+  | "remainingContractDays"
+  | "status";
+
+type ManagementSortKey =
+  | "contract"
+  | "gardenAndFertilizer"
+  | "supplierAndBudget"
+  | "grandTotal"
+  | "progress"
+  | "remainingQuantity"
+  | "remainingContractDays"
+  | "status";
+
 function formatCompactCurrency(value: number) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -73,6 +103,19 @@ function formatCompactCurrency(value: number) {
 
 function getCompletionPercentage(row: SupplyOrderTableRow) {
   return getSupplyOrderProgressPercentage(row.quantityOrdered, row.totalDelivered);
+}
+
+function getNotificationSortValue(status: NotificationStatus) {
+  switch (status) {
+    case "MERAH":
+      return 3;
+    case "KUNING":
+      return 2;
+    case "HIJAU":
+      return 1;
+    default:
+      return 0;
+  }
 }
 
 function getNotificationStatusLabel(status: NotificationStatus) {
@@ -132,64 +175,164 @@ function TableSummary({
   );
 }
 
-function HomeTableHeader() {
+function HomeTableHeader({
+  sortState,
+  onSort,
+}: {
+  sortState: SortState<HomeSortKey>;
+  onSort: (key: HomeSortKey) => void;
+}) {
   return (
     <TableRow>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        SP2BJ &amp; Kontrak
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Kebun
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Jenis Pupuk
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Pemasok
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Progress Pasokan
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur text-right">
-        Sisa Volume
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur text-right">
-        Sisa Kontrak
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Status
-      </TableHead>
+      <SortableTableHead
+        label="SP2BJ & Kontrak"
+        isActive={sortState?.key === "contract"}
+        direction={sortState?.key === "contract" ? sortState.direction : undefined}
+        onClick={() => onSort("contract")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Kebun"
+        isActive={sortState?.key === "garden"}
+        direction={sortState?.key === "garden" ? sortState.direction : undefined}
+        onClick={() => onSort("garden")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Jenis Pupuk"
+        isActive={sortState?.key === "fertilizer"}
+        direction={sortState?.key === "fertilizer" ? sortState.direction : undefined}
+        onClick={() => onSort("fertilizer")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Pemasok"
+        isActive={sortState?.key === "supplier"}
+        direction={sortState?.key === "supplier" ? sortState.direction : undefined}
+        onClick={() => onSort("supplier")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Progress Pasokan"
+        isActive={sortState?.key === "progress"}
+        direction={sortState?.key === "progress" ? sortState.direction : undefined}
+        onClick={() => onSort("progress")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Sisa Volume"
+        align="right"
+        isActive={sortState?.key === "remainingQuantity"}
+        direction={
+          sortState?.key === "remainingQuantity" ? sortState.direction : undefined
+        }
+        onClick={() => onSort("remainingQuantity")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Sisa Kontrak"
+        align="right"
+        isActive={sortState?.key === "remainingContractDays"}
+        direction={
+          sortState?.key === "remainingContractDays"
+            ? sortState.direction
+            : undefined
+        }
+        onClick={() => onSort("remainingContractDays")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Status"
+        isActive={sortState?.key === "status"}
+        direction={sortState?.key === "status" ? sortState.direction : undefined}
+        onClick={() => onSort("status")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
     </TableRow>
   );
 }
 
-function ManagementTableHeader() {
+function ManagementTableHeader({
+  sortState,
+  onSort,
+}: {
+  sortState: SortState<ManagementSortKey>;
+  onSort: (key: ManagementSortKey) => void;
+}) {
   return (
     <TableRow>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Kontrak
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Kebun &amp; Pupuk
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Supplier &amp; Anggaran
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur text-right">
-        Nilai Kontrak
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Progress
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur text-right">
-        Sisa Volume
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Masa Kontrak
-      </TableHead>
-      <TableHead className="sticky top-0 z-10 bg-white/85 backdrop-blur">
-        Notifikasi
-      </TableHead>
+      <SortableTableHead
+        label="Kontrak"
+        isActive={sortState?.key === "contract"}
+        direction={sortState?.key === "contract" ? sortState.direction : undefined}
+        onClick={() => onSort("contract")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Kebun & Pupuk"
+        isActive={sortState?.key === "gardenAndFertilizer"}
+        direction={
+          sortState?.key === "gardenAndFertilizer"
+            ? sortState.direction
+            : undefined
+        }
+        onClick={() => onSort("gardenAndFertilizer")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Supplier & Anggaran"
+        isActive={sortState?.key === "supplierAndBudget"}
+        direction={
+          sortState?.key === "supplierAndBudget"
+            ? sortState.direction
+            : undefined
+        }
+        onClick={() => onSort("supplierAndBudget")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Nilai Kontrak"
+        align="right"
+        isActive={sortState?.key === "grandTotal"}
+        direction={sortState?.key === "grandTotal" ? sortState.direction : undefined}
+        onClick={() => onSort("grandTotal")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Progress"
+        isActive={sortState?.key === "progress"}
+        direction={sortState?.key === "progress" ? sortState.direction : undefined}
+        onClick={() => onSort("progress")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Sisa Volume"
+        align="right"
+        isActive={sortState?.key === "remainingQuantity"}
+        direction={
+          sortState?.key === "remainingQuantity" ? sortState.direction : undefined
+        }
+        onClick={() => onSort("remainingQuantity")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Masa Kontrak"
+        isActive={sortState?.key === "remainingContractDays"}
+        direction={
+          sortState?.key === "remainingContractDays"
+            ? sortState.direction
+            : undefined
+        }
+        onClick={() => onSort("remainingContractDays")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
+      <SortableTableHead
+        label="Notifikasi"
+        isActive={sortState?.key === "status"}
+        direction={sortState?.key === "status" ? sortState.direction : undefined}
+        onClick={() => onSort("status")}
+        className="sticky top-0 z-10 bg-white/85 backdrop-blur"
+      />
       <TableHead className="sticky top-0 z-10 w-[160px] min-w-[160px] bg-white/85 text-right backdrop-blur">
         Aksi
       </TableHead>
@@ -537,10 +680,41 @@ export function SupplyOrderTable({
   description,
   maxRows,
 }: SupplyOrderTableProps) {
+  const [homeSortState, setHomeSortState] = useState<SortState<HomeSortKey>>(null);
+  const [managementSortState, setManagementSortState] = useState<
+    SortState<ManagementSortKey>
+  >(null);
+
   const displayedRows =
     typeof maxRows === "number" ? rows.slice(0, maxRows) : rows;
 
   const isHomeMode = mode === "home";
+
+  const sortedRows = useMemo(() => {
+    if (isHomeMode) {
+      return sortRows(displayedRows, homeSortState, {
+        contract: (row) => row.sp2bjNumber,
+        garden: (row) => row.gardenName,
+        fertilizer: (row) => row.fertilizerTypeName,
+        supplier: (row) => row.supplierName,
+        progress: (row) => getCompletionPercentage(row),
+        remainingQuantity: (row) => row.remainingQuantity,
+        remainingContractDays: (row) => row.remainingContractDays,
+        status: (row) => getNotificationSortValue(row.notificationStatus),
+      });
+    }
+
+    return sortRows(displayedRows, managementSortState, {
+      contract: (row) => row.sp2bjNumber,
+      gardenAndFertilizer: (row) => `${row.gardenName} ${row.fertilizerTypeName}`,
+      supplierAndBudget: (row) => `${row.supplierName} ${getBudgetTypeLabel(row.budgetType)}`,
+      grandTotal: (row) => row.grandTotal,
+      progress: (row) => getCompletionPercentage(row),
+      remainingQuantity: (row) => row.remainingQuantity,
+      remainingContractDays: (row) => row.remainingContractDays,
+      status: (row) => getNotificationSortValue(row.notificationStatus),
+    });
+  }, [displayedRows, homeSortState, isHomeMode, managementSortState]);
 
   return (
     <Card>
@@ -580,7 +754,7 @@ export function SupplyOrderTable({
         ) : isHomeMode ? (
           <>
             <div className="grid gap-4 xl:hidden">
-              {displayedRows.map((row) => (
+              {sortedRows.map((row) => (
                 <HomeMobileCard key={row.id} row={row} />
               ))}
             </div>
@@ -588,10 +762,13 @@ export function SupplyOrderTable({
             <div className="hidden overflow-x-auto xl:block">
               <Table>
                 <TableHeader className="[&_tr]:border-white/45">
-                  <HomeTableHeader />
+                  <HomeTableHeader
+                  sortState={homeSortState}
+                  onSort={(key) => setHomeSortState((current) => getNextSortState(current, key))}
+                />
                 </TableHeader>
                 <TableBody>
-                  {displayedRows.map((row) => (
+                  {sortedRows.map((row) => (
                     <HomeTableRow key={row.id} row={row} />
                   ))}
                 </TableBody>
@@ -601,7 +778,7 @@ export function SupplyOrderTable({
         ) : (
           <>
             <div className="grid gap-4 xl:hidden">
-              {displayedRows.map((row) => (
+              {sortedRows.map((row) => (
                 <ManagementMobileCard key={row.id} row={row} />
               ))}
             </div>
@@ -609,10 +786,15 @@ export function SupplyOrderTable({
             <div className="hidden overflow-x-auto xl:block">
               <Table>
                 <TableHeader className="[&_tr]:border-white/45">
-                  <ManagementTableHeader />
+                  <ManagementTableHeader
+                  sortState={managementSortState}
+                  onSort={(key) =>
+                    setManagementSortState((current) => getNextSortState(current, key))
+                  }
+                />
                 </TableHeader>
                 <TableBody>
-                  {displayedRows.map((row) => (
+                  {sortedRows.map((row) => (
                     <ManagementTableRow key={row.id} row={row} />
                   ))}
                 </TableBody>

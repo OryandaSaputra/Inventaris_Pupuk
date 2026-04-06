@@ -1,8 +1,12 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import type { UserRole } from "@/src/generated/prisma";
-import { ShieldCheck, Trees, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { UserStatusBadge } from "@/components/admin/user-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
   Table,
   TableBody,
@@ -11,6 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  getNextSortState,
+  sortRows,
+  type SortState,
+} from "@/lib/table-sort";
 import { formatDate } from "@/lib/utils";
 
 export type UserTableRow = {
@@ -24,6 +33,15 @@ export type UserTableRow = {
   assignedGardenName: string | null;
   assignedGardenCode: string | null;
 };
+
+type UserSortKey =
+  | "name"
+  | "email"
+  | "role"
+  | "garden"
+  | "summary"
+  | "status"
+  | "createdAt";
 
 function getRoleLabel(role: UserRole) {
   switch (role) {
@@ -52,6 +70,18 @@ function getRoleSummary(row: UserTableRow) {
   )} dan dibatasi ke kebun ${row.assignedGardenCode ?? "-"} · ${
     row.assignedGardenName
   }.`;
+}
+
+function getGardenAccessLabel(row: UserTableRow) {
+  if (row.role === "ADMIN") {
+    return "Semua kebun";
+  }
+
+  if (!row.assignedGardenName) {
+    return "-";
+  }
+
+  return `${row.assignedGardenCode ?? "-"} · ${row.assignedGardenName}`;
 }
 
 function RoleBadge({ role }: { role: UserRole }) {
@@ -107,11 +137,7 @@ function UserMobileCard({
             Kebun Akses
           </p>
           <p className="mt-2 text-sm font-medium text-slate-900">
-            {row.role === "ADMIN"
-              ? "Semua kebun"
-              : row.assignedGardenName
-                ? `${row.assignedGardenCode ?? "-"} · ${row.assignedGardenName}`
-                : "-"}
+            {getGardenAccessLabel(row)}
           </p>
         </div>
       </div>
@@ -156,6 +182,26 @@ export function UserTable({
   onDelete: (row: UserTableRow) => void;
   deletingId?: string | null;
 }) {
+  const [sortState, setSortState] = useState<SortState<UserSortKey>>(null);
+
+  const sortedRows = useMemo(
+    () =>
+      sortRows(rows, sortState, {
+        name: (row) => row.name,
+        email: (row) => row.email,
+        role: (row) => getRoleLabel(row.role),
+        garden: (row) => getGardenAccessLabel(row),
+        summary: (row) => getRoleSummary(row),
+        status: (row) => row.isActive,
+        createdAt: (row) => row.createdAt,
+      }),
+    [rows, sortState],
+  );
+
+  function toggleSort(key: UserSortKey) {
+    setSortState((current) => getNextSortState(current, key));
+  }
+
   return (
     <Card className="glass-surface rounded-[2rem]">
       <CardHeader>
@@ -166,14 +212,15 @@ export function UserTable({
           <div>
             <CardTitle>Daftar Pengguna</CardTitle>
             <p className="mt-1 text-sm leading-6 text-slate-600">
-              Tabel user dirapikan agar role, kebun akses, status, dan aksi edit/hapus lebih cepat dibaca.
+              Klik judul kolom untuk mengurutkan user berdasarkan nama, role,
+              kebun akses, status, atau tanggal dibuat.
             </p>
           </div>
         </div>
       </CardHeader>
 
       <CardContent>
-        {rows.length === 0 ? (
+        {sortedRows.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/65 bg-white/70 px-6 py-12 text-center">
             <p className="text-base font-medium text-slate-900">
               Belum ada user yang terdaftar.
@@ -185,7 +232,7 @@ export function UserTable({
         ) : (
           <>
             <div className="grid gap-3 xl:hidden">
-              {rows.map((row) => (
+              {sortedRows.map((row) => (
                 <UserMobileCard
                   key={row.id}
                   row={row}
@@ -200,19 +247,54 @@ export function UserTable({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Kebun Akses</TableHead>
-                    <TableHead>Ringkasan Hak Akses</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Dibuat</TableHead>
+                    <SortableTableHead
+                      label="Nama"
+                      isActive={sortState?.key === "name"}
+                      direction={sortState?.key === "name" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("name")}
+                    />
+                    <SortableTableHead
+                      label="Email"
+                      isActive={sortState?.key === "email"}
+                      direction={sortState?.key === "email" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("email")}
+                    />
+                    <SortableTableHead
+                      label="Role"
+                      isActive={sortState?.key === "role"}
+                      direction={sortState?.key === "role" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("role")}
+                    />
+                    <SortableTableHead
+                      label="Kebun Akses"
+                      isActive={sortState?.key === "garden"}
+                      direction={sortState?.key === "garden" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("garden")}
+                    />
+                    <SortableTableHead
+                      label="Ringkasan Hak Akses"
+                      isActive={sortState?.key === "summary"}
+                      direction={sortState?.key === "summary" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("summary")}
+                    />
+                    <SortableTableHead
+                      label="Status"
+                      isActive={sortState?.key === "status"}
+                      direction={sortState?.key === "status" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("status")}
+                    />
+                    <SortableTableHead
+                      label="Dibuat"
+                      isActive={sortState?.key === "createdAt"}
+                      direction={sortState?.key === "createdAt" ? sortState.direction : undefined}
+                      onClick={() => toggleSort("createdAt")}
+                    />
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                  {rows.map((row) => (
+                  {sortedRows.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="font-medium text-slate-900">
                         {row.name}
@@ -221,13 +303,7 @@ export function UserTable({
                       <TableCell>
                         <RoleBadge role={row.role} />
                       </TableCell>
-                      <TableCell>
-                        {row.role === "ADMIN"
-                          ? "Semua kebun"
-                          : row.assignedGardenName
-                            ? `${row.assignedGardenCode ?? "-"} · ${row.assignedGardenName}`
-                            : "-"}
-                      </TableCell>
+                      <TableCell>{getGardenAccessLabel(row)}</TableCell>
                       <TableCell className="min-w-[280px] text-sm text-slate-600">
                         {getRoleSummary(row)}
                       </TableCell>

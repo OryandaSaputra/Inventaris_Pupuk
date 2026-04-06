@@ -44,6 +44,7 @@ import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
   Table,
   TableBody,
@@ -53,6 +54,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  getNextSortState,
+  sortRows,
+  type SortState,
+} from "@/lib/table-sort";
 import { formatDate } from "@/lib/utils";
 
 const STATUS_OPTIONS = [
@@ -79,6 +85,18 @@ type Props =
       title: string;
       description: string;
     };
+
+
+type GardenSortKey = "name" | "code" | "address" | "status" | "usage" | "createdAt";
+type FertilizerSortKey = "name" | "status" | "usage" | "createdAt";
+type SupplierSortKey =
+  | "name"
+  | "phone"
+  | "email"
+  | "address"
+  | "status"
+  | "usage"
+  | "createdAt";
 
 function getFieldError(
   errors: Record<string, string[]> | undefined,
@@ -318,6 +336,63 @@ export function MasterDataManager(props: Props) {
       ? (editingRow as SupplierMasterDataRow)
       : null;
 
+  const [gardenSortState, setGardenSortState] = useState<SortState<GardenSortKey>>(null);
+  const [fertilizerSortState, setFertilizerSortState] = useState<
+    SortState<FertilizerSortKey>
+  >(null);
+  const [supplierSortState, setSupplierSortState] = useState<SortState<SupplierSortKey>>(null);
+
+  const sortedGardenRows = useMemo(() => {
+    if (props.type !== "garden") {
+      return [] as GardenMasterDataRow[];
+    }
+
+    return sortRows(props.rows, gardenSortState, {
+      name: (row) => row.name,
+      code: (row) => row.code,
+      address: (row) => row.address,
+      status: (row) => row.isActive,
+      usage: (row) => row.supplyOrderCount,
+      createdAt: (row) => row.createdAt,
+    });
+  }, [gardenSortState, props]);
+
+  const sortedFertilizerRows = useMemo(() => {
+    if (props.type !== "fertilizer") {
+      return [] as FertilizerMasterDataRow[];
+    }
+
+    return sortRows(props.rows, fertilizerSortState, {
+      name: (row) => row.name,
+      status: (row) => row.isActive,
+      usage: (row) => row.supplyOrderCount,
+      createdAt: (row) => row.createdAt,
+    });
+  }, [fertilizerSortState, props]);
+
+  const sortedSupplierRows = useMemo(() => {
+    if (props.type !== "supplier") {
+      return [] as SupplierMasterDataRow[];
+    }
+
+    return sortRows(props.rows, supplierSortState, {
+      name: (row) => row.name,
+      phone: (row) => row.phone,
+      email: (row) => row.email,
+      address: (row) => row.address,
+      status: (row) => row.isActive,
+      usage: (row) => row.supplyOrderCount,
+      createdAt: (row) => row.createdAt,
+    });
+  }, [props, supplierSortState]);
+
+  const totalRows =
+    props.type === "garden"
+      ? sortedGardenRows.length
+      : props.type === "fertilizer"
+        ? sortedFertilizerRows.length
+        : sortedSupplierRows.length;
+
   async function handleDelete(id: string) {
     const confirmed = window.confirm(
       "Yakin ingin menghapus data ini? Jika data sudah dipakai transaksi, penghapusan akan ditolak.",
@@ -520,11 +595,12 @@ export function MasterDataManager(props: Props) {
           <CardTitle>Data Tersimpan</CardTitle>
           <CardDescription>
             Master data di bawah ini langsung dipakai oleh modul lain di dalam sistem.
+            Klik judul kolom untuk mengurutkan data sesuai kebutuhan.
           </CardDescription>
         </CardHeader>
 
         <CardContent>
-          {props.rows.length === 0 ? (
+          {totalRows === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/65 bg-white/70 px-6 py-12 text-center">
               <p className="text-base font-medium text-slate-900">
                 Belum ada data tersimpan.
@@ -537,7 +613,7 @@ export function MasterDataManager(props: Props) {
             <>
               <div className="grid gap-3 xl:hidden">
                 {props.type === "garden"
-                  ? props.rows.map((row) => (
+                  ? sortedGardenRows.map((row) => (
                       <div
                         key={row.id}
                         className="rounded-3xl border border-white/65 bg-white/70 p-4"
@@ -579,7 +655,7 @@ export function MasterDataManager(props: Props) {
                   : null}
 
                 {props.type === "fertilizer"
-                  ? props.rows.map((row) => (
+                  ? sortedFertilizerRows.map((row) => (
                       <div
                         key={row.id}
                         className="rounded-3xl border border-white/65 bg-white/70 p-4"
@@ -614,7 +690,7 @@ export function MasterDataManager(props: Props) {
                   : null}
 
                 {props.type === "supplier"
-                  ? props.rows.map((row) => (
+                  ? sortedSupplierRows.map((row) => (
                       <div
                         key={row.id}
                         className="rounded-3xl border border-white/65 bg-white/70 p-4"
@@ -662,44 +738,264 @@ export function MasterDataManager(props: Props) {
                     <TableRow>
                       {props.type === "garden" ? (
                         <>
-                          <TableHead>Nama Kebun</TableHead>
-                          <TableHead>Kode</TableHead>
-                          <TableHead>Alamat</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Dipakai</TableHead>
-                          <TableHead>Dibuat</TableHead>
+                          <SortableTableHead
+                            label="Nama Kebun"
+                            isActive={gardenSortState?.key === "name"}
+                            direction={
+                              gardenSortState?.key === "name"
+                                ? gardenSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setGardenSortState((current) =>
+                                getNextSortState(current, "name"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Kode"
+                            isActive={gardenSortState?.key === "code"}
+                            direction={
+                              gardenSortState?.key === "code"
+                                ? gardenSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setGardenSortState((current) =>
+                                getNextSortState(current, "code"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Alamat"
+                            isActive={gardenSortState?.key === "address"}
+                            direction={
+                              gardenSortState?.key === "address"
+                                ? gardenSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setGardenSortState((current) =>
+                                getNextSortState(current, "address"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Status"
+                            isActive={gardenSortState?.key === "status"}
+                            direction={
+                              gardenSortState?.key === "status"
+                                ? gardenSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setGardenSortState((current) =>
+                                getNextSortState(current, "status"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Dipakai"
+                            isActive={gardenSortState?.key === "usage"}
+                            direction={
+                              gardenSortState?.key === "usage"
+                                ? gardenSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setGardenSortState((current) =>
+                                getNextSortState(current, "usage"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Dibuat"
+                            isActive={gardenSortState?.key === "createdAt"}
+                            direction={
+                              gardenSortState?.key === "createdAt"
+                                ? gardenSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setGardenSortState((current) =>
+                                getNextSortState(current, "createdAt"),
+                              )
+                            }
+                          />
                           <TableHead className="text-right">Aksi</TableHead>
                         </>
                       ) : null}
 
                       {props.type === "fertilizer" ? (
                         <>
-                          <TableHead>Nama Pupuk</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Dipakai</TableHead>
-                          <TableHead>Dibuat</TableHead>
+                          <SortableTableHead
+                            label="Nama Pupuk"
+                            isActive={fertilizerSortState?.key === "name"}
+                            direction={
+                              fertilizerSortState?.key === "name"
+                                ? fertilizerSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setFertilizerSortState((current) =>
+                                getNextSortState(current, "name"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Status"
+                            isActive={fertilizerSortState?.key === "status"}
+                            direction={
+                              fertilizerSortState?.key === "status"
+                                ? fertilizerSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setFertilizerSortState((current) =>
+                                getNextSortState(current, "status"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Dipakai"
+                            isActive={fertilizerSortState?.key === "usage"}
+                            direction={
+                              fertilizerSortState?.key === "usage"
+                                ? fertilizerSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setFertilizerSortState((current) =>
+                                getNextSortState(current, "usage"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Dibuat"
+                            isActive={fertilizerSortState?.key === "createdAt"}
+                            direction={
+                              fertilizerSortState?.key === "createdAt"
+                                ? fertilizerSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setFertilizerSortState((current) =>
+                                getNextSortState(current, "createdAt"),
+                              )
+                            }
+                          />
                           <TableHead className="text-right">Aksi</TableHead>
                         </>
                       ) : null}
 
                       {props.type === "supplier" ? (
                         <>
-                          <TableHead>Nama Supplier</TableHead>
-                          <TableHead>Telepon</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Alamat</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Dipakai</TableHead>
-                          <TableHead>Dibuat</TableHead>
+                          <SortableTableHead
+                            label="Nama Supplier"
+                            isActive={supplierSortState?.key === "name"}
+                            direction={
+                              supplierSortState?.key === "name"
+                                ? supplierSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setSupplierSortState((current) =>
+                                getNextSortState(current, "name"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Telepon"
+                            isActive={supplierSortState?.key === "phone"}
+                            direction={
+                              supplierSortState?.key === "phone"
+                                ? supplierSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setSupplierSortState((current) =>
+                                getNextSortState(current, "phone"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Email"
+                            isActive={supplierSortState?.key === "email"}
+                            direction={
+                              supplierSortState?.key === "email"
+                                ? supplierSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setSupplierSortState((current) =>
+                                getNextSortState(current, "email"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Alamat"
+                            isActive={supplierSortState?.key === "address"}
+                            direction={
+                              supplierSortState?.key === "address"
+                                ? supplierSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setSupplierSortState((current) =>
+                                getNextSortState(current, "address"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Status"
+                            isActive={supplierSortState?.key === "status"}
+                            direction={
+                              supplierSortState?.key === "status"
+                                ? supplierSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setSupplierSortState((current) =>
+                                getNextSortState(current, "status"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Dipakai"
+                            isActive={supplierSortState?.key === "usage"}
+                            direction={
+                              supplierSortState?.key === "usage"
+                                ? supplierSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setSupplierSortState((current) =>
+                                getNextSortState(current, "usage"),
+                              )
+                            }
+                          />
+                          <SortableTableHead
+                            label="Dibuat"
+                            isActive={supplierSortState?.key === "createdAt"}
+                            direction={
+                              supplierSortState?.key === "createdAt"
+                                ? supplierSortState.direction
+                                : undefined
+                            }
+                            onClick={() =>
+                              setSupplierSortState((current) =>
+                                getNextSortState(current, "createdAt"),
+                              )
+                            }
+                          />
                           <TableHead className="text-right">Aksi</TableHead>
                         </>
-                      ) : null}
-                    </TableRow>
+                      ) : null}                    </TableRow>
                   </TableHeader>
 
                   <TableBody>
                     {props.type === "garden"
-                      ? props.rows.map((row) => (
+                      ? sortedGardenRows.map((row) => (
                           <TableRow key={row.id}>
                             <TableCell className="font-medium text-slate-900">
                               {row.name}
@@ -727,7 +1023,7 @@ export function MasterDataManager(props: Props) {
                       : null}
 
                     {props.type === "fertilizer"
-                      ? props.rows.map((row) => (
+                      ? sortedFertilizerRows.map((row) => (
                           <TableRow key={row.id}>
                             <TableCell className="font-medium text-slate-900">
                               {row.name}
@@ -751,7 +1047,7 @@ export function MasterDataManager(props: Props) {
                       : null}
 
                     {props.type === "supplier"
-                      ? props.rows.map((row) => (
+                      ? sortedSupplierRows.map((row) => (
                           <TableRow key={row.id}>
                             <TableCell className="font-medium text-slate-900">
                               {row.name}
