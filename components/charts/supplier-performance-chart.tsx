@@ -87,21 +87,24 @@ function SupplierTooltip({
 
 export function SupplierPerformanceChart({
   rows,
+  limit = 6,
+  title = "Performa Pemasok",
+  description = "Perbandingan volume kontrak, pengiriman, outstanding, dan fill rate per pemasok.",
 }: {
   rows: SupplierPerformanceRow[];
+  limit?: number;
+  title?: string;
+  description?: string;
 }) {
-  const chartRows = rows.slice(0, 6);
+  const chartRows = rows.slice(0, limit);
 
   return (
     <Card className="h-full">
       <CardHeader className="gap-3">
         <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <CardTitle>Performa Pemasok</CardTitle>
-            {/* <CardDescription>
-              Perbandingan volume kontrak, pengiriman, outstanding, dan fill rate
-              per pemasok.
-            </CardDescription> */}
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[360px]">
@@ -119,7 +122,9 @@ export function SupplierPerformanceChart({
                 Kontrak Selesai
               </p>
               <p className="mt-2 text-lg font-semibold text-slate-50">
-                {formatNumber(rows.reduce((total, row) => total + row.completedContracts, 0))}
+                {formatNumber(
+                  rows.reduce((total, row) => total + row.completedContracts, 0),
+                )}
               </p>
             </div>
 
@@ -129,7 +134,10 @@ export function SupplierPerformanceChart({
               </p>
               <p className="mt-2 text-lg font-semibold text-slate-50">
                 {rows.length
-                  ? `${Math.round(rows.reduce((total, row) => total + row.fillRate, 0) / rows.length)}%`
+                  ? `${Math.round(
+                      rows.reduce((total, row) => total + row.fillRate, 0) /
+                        rows.length,
+                    )}%`
                   : "0%"}
               </p>
             </div>

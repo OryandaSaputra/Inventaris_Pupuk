@@ -415,8 +415,7 @@ select option:disabled {
   background: #0b1730 !important;
 }
 
-select option:checked,
-select option:selected {
+select option:checked {
   color: #f8fafc !important;
-  background: linear-gradient(180deg, #16325f, #11284d) !important;
+  background: #16325f !important;
 }
