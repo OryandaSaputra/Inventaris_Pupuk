@@ -11,7 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="id">
-      <body className="text-slate-900"><AppLoadingProvider>{children}</AppLoadingProvider></body>
+      <body className="text-slate-900">
+        <AppLoadingProvider>{children}</AppLoadingProvider>
+      </body>
     </html>
   );
 }

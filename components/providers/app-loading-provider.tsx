@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -49,12 +50,34 @@ function buildLoadingId() {
   return `loading-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function AppLoadingProvider({ children }: { children: ReactNode }) {
+function RouteLoadingEvents({
+  hideLoading,
+}: {
+  hideLoading: (id: string) => void;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const initialRenderRef = useRef(true);
+
+  useEffect(() => {
+    if (initialRenderRef.current) {
+      initialRenderRef.current = false;
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      hideLoading(ROUTE_LOADING_ID);
+    }, 180);
+
+    return () => window.clearTimeout(timer);
+  }, [hideLoading, pathname, searchParams]);
+
+  return null;
+}
+
+export function AppLoadingProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Record<string, LoadingEntry>>({});
   const orderRef = useRef(0);
-  const initialRenderRef = useRef(true);
 
   const showLoading = useCallback((options: LoadingOptions = {}) => {
     const id = options.id ?? buildLoadingId();
@@ -106,19 +129,6 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
 
     return values.sort((left, right) => right.order - left.order)[0] ?? null;
   }, [entries]);
-
-  useEffect(() => {
-    if (initialRenderRef.current) {
-      initialRenderRef.current = false;
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      hideLoading(ROUTE_LOADING_ID);
-    }, 180);
-
-    return () => window.clearTimeout(timer);
-  }, [hideLoading, pathname, searchParams]);
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
@@ -227,7 +237,12 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppLoadingContext.Provider value={value}>
+      <Suspense fallback={null}>
+        <RouteLoadingEvents hideLoading={hideLoading} />
+      </Suspense>
+
       {children}
+
       {activeEntry ? (
         <LoadingScreen
           message={activeEntry.message}
