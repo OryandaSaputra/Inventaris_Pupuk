@@ -31,19 +31,21 @@ function SidebarChildLink({
     <Link
       href={child.href}
       className={cn(
-        "group flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-sm font-medium transition-all",
+        "group flex items-center gap-2.5 rounded-xl border px-3 py-2 text-[13px] font-medium transition-all",
         active
-          ? "border-blue-300/18 bg-[linear-gradient(135deg,rgba(96,165,250,0.22),rgba(59,130,246,0.08))] text-slate-50 shadow-[0_18px_30px_-24px_rgba(59,130,246,0.42)]"
-          : "border-white/8 bg-white/4 text-slate-300 hover:-translate-y-0.5 hover:border-blue-300/18 hover:bg-white/8 hover:text-slate-50",
+          ? "border-sky-300/16 bg-[linear-gradient(135deg,rgba(59,130,246,0.18),rgba(37,99,235,0.08))] text-slate-50 shadow-[0_18px_30px_-24px_rgba(59,130,246,0.28)]"
+          : "border-white/6 bg-white/3 text-slate-300 hover:border-slate-300/15 hover:bg-white/6 hover:text-slate-50",
       )}
     >
       <ChildIcon
         className={cn(
-          "h-3.5 w-3.5",
-          active ? "text-blue-100" : "text-slate-400 group-hover:text-blue-100",
+          "h-3.5 w-3.5 shrink-0",
+          active
+            ? "text-sky-100"
+            : "text-slate-400 group-hover:text-slate-200",
         )}
       />
-      {child.label}
+      <span className="truncate">{child.label}</span>
     </Link>
   );
 }
@@ -64,20 +66,20 @@ function SidebarLinkItem({
     <Link
       href={item.href}
       className={cn(
-        "group flex items-center gap-3 rounded-[1.35rem] border px-4 py-3 text-sm font-medium transition-all",
+        "group flex items-center gap-3 rounded-[1.1rem] border px-3.5 py-2.5 text-[14px] font-medium transition-all",
         active
-          ? "border-blue-300/20 bg-[linear-gradient(135deg,rgba(96,165,250,0.22),rgba(59,130,246,0.08))] text-slate-50 shadow-[0_18px_34px_-24px_rgba(59,130,246,0.48)]"
-          : "border-white/8 bg-white/4 text-slate-300 hover:-translate-y-0.5 hover:border-blue-300/16 hover:bg-white/8 hover:text-slate-50",
+          ? "border-sky-300/16 bg-[linear-gradient(135deg,rgba(59,130,246,0.2),rgba(37,99,235,0.08))] text-slate-50 shadow-[0_20px_34px_-26px_rgba(59,130,246,0.3)]"
+          : "border-white/7 bg-white/4 text-slate-300 hover:border-slate-300/15 hover:bg-white/7 hover:text-slate-50",
       )}
     >
       <span
         className={cn(
           isMobile
             ? "inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all"
-            : "inline-flex h-10 w-10 items-center justify-center rounded-[1rem] border transition-all",
+            : "inline-flex h-9 w-9 items-center justify-center rounded-[0.95rem] border transition-all",
           active
-            ? "border-blue-300/16 bg-blue-400/12 text-blue-100 shadow-[0_12px_24px_-16px_rgba(59,130,246,0.36)]"
-            : "border-white/10 bg-white/4 text-slate-400 group-hover:text-blue-100",
+            ? "border-sky-300/16 bg-sky-400/12 text-sky-100 shadow-[0_12px_24px_-16px_rgba(59,130,246,0.28)]"
+            : "border-white/10 bg-white/4 text-slate-400 group-hover:text-slate-200",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -106,17 +108,17 @@ function SidebarDropdownItem({
   return (
     <div
       className={cn(
-        "rounded-[1.55rem] border transition-all",
+        "rounded-[1.25rem] border transition-all",
         activeChild || activeParent || open
-          ? "border-blue-300/16 bg-[linear-gradient(180deg,rgba(17,31,58,0.88),rgba(11,21,41,0.8))] shadow-[0_22px_40px_-30px_rgba(59,130,246,0.28)]"
-          : "border-white/8 bg-white/4",
+          ? "border-sky-300/14 bg-[linear-gradient(180deg,rgba(16,34,70,0.88),rgba(10,24,52,0.8))] shadow-[0_22px_40px_-30px_rgba(59,130,246,0.18)]"
+          : "border-white/7 bg-white/4",
       )}
     >
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "group flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium transition-all",
+          "group flex w-full items-center gap-3 px-3.5 py-2.5 text-left text-[14px] font-medium transition-all",
           activeChild || activeParent || open
             ? "text-slate-50"
             : "text-slate-300 hover:text-slate-50",
@@ -128,10 +130,10 @@ function SidebarDropdownItem({
           className={cn(
             isMobile
               ? "inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all"
-              : "inline-flex h-10 w-10 items-center justify-center rounded-[1rem] border transition-all",
+              : "inline-flex h-9 w-9 items-center justify-center rounded-[0.95rem] border transition-all",
             activeChild || activeParent || open
-              ? "border-blue-300/16 bg-blue-400/12 text-blue-100"
-              : "border-white/10 bg-white/4 text-slate-400 group-hover:text-blue-100",
+              ? "border-sky-300/16 bg-sky-400/12 text-sky-100"
+              : "border-white/10 bg-white/4 text-slate-400 group-hover:text-slate-200",
           )}
         >
           <Icon className="h-4 w-4" />
@@ -139,17 +141,12 @@ function SidebarDropdownItem({
 
         <div className="min-w-0 flex-1">
           <p className="truncate">{isMobile ? item.shortLabel : item.label}</p>
-          {!isMobile ? (
-            <p className="mt-0.5 text-xs text-slate-400">
-              Klik untuk buka submenu
-            </p>
-          ) : null}
         </div>
 
         <ChevronIcon
           className={cn(
             "h-4 w-4 shrink-0 transition-transform duration-200",
-            open ? "rotate-90 text-blue-100" : "text-slate-400",
+            open ? "rotate-90 text-sky-100" : "text-slate-400",
           )}
         />
       </button>
@@ -161,7 +158,7 @@ function SidebarDropdownItem({
         )}
       >
         <div className="overflow-hidden">
-          <div className="space-y-2 px-3 pb-3">
+          <div className="ml-5 space-y-2 border-l border-white/8 px-3 pb-3">
             {item.children?.map((child) => (
               <SidebarChildLink
                 key={child.href}

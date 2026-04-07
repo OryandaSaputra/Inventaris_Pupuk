@@ -6,7 +6,6 @@ import {
   CalendarRange,
   CircleDollarSign,
   ClipboardList,
-  Package2,
   Save,
   Sparkles,
   Truck,
@@ -16,6 +15,7 @@ import {
   updateSupplyOrderAction,
 } from "@/lib/actions/admin";
 import { initialActionState } from "@/lib/actions/shared";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { calculateSupplyCosts } from "@/lib/supply-order";
 import { cn, formatCurrency, formatNumber } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -229,6 +229,20 @@ export function SupplyOrderForm({
     initialActionState,
   );
 
+  const isEditMode = mode === "edit";
+
+  useActionFeedback({
+    pending,
+    state,
+    loadingMessage: isEditMode
+      ? "Menyimpan perubahan kontrak pasokan..."
+      : "Menyimpan data pasokan baru...",
+    loadingDescription:
+      "Mohon tunggu sebentar, sistem sedang memproses kontrak pasokan pupuk.",
+    successTitle: isEditMode ? "Pasokan diperbarui" : "Pasokan ditambahkan",
+    errorTitle: "Gagal menyimpan pasokan",
+  });
+
   const calculated = useMemo(
     () =>
       calculateSupplyCosts(
@@ -253,8 +267,6 @@ export function SupplyOrderForm({
 
     router.refresh();
   }, [mode, router, state.success]);
-
-  const isEditMode = mode === "edit";
 
   return (
     <Card className="glass-surface-strong w-full overflow-hidden rounded-[2rem]">

@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useActionState,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ClipboardList,
@@ -27,6 +20,7 @@ import {
   saveSupplierAction,
 } from "@/lib/actions/admin";
 import { initialActionState, type ActionState } from "@/lib/actions/shared";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import type {
   FertilizerMasterDataRow,
   GardenMasterDataRow,
@@ -54,11 +48,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { getNextSortState, sortRows, type SortState } from "@/lib/table-sort";
 import {
-  getNextSortState,
-  sortRows,
-  type SortState,
-} from "@/lib/table-sort";
+  confirmDelete,
+  showErrorToast,
+  showSuccessToast,
+} from "@/lib/feedback/sweet-alert";
+import { useAppLoading } from "@/components/providers/app-loading-provider";
 import { formatDate } from "@/lib/utils";
 
 const STATUS_OPTIONS = [
@@ -86,8 +82,13 @@ type Props =
       description: string;
     };
 
-
-type GardenSortKey = "name" | "code" | "address" | "status" | "usage" | "createdAt";
+type GardenSortKey =
+  | "name"
+  | "code"
+  | "address"
+  | "status"
+  | "usage"
+  | "createdAt";
 type FertilizerSortKey = "name" | "status" | "usage" | "createdAt";
 type SupplierSortKey =
   | "name"
@@ -285,10 +286,13 @@ function ActionButtons({
 export function MasterDataManager(props: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
+  const { withLoading } = useAppLoading();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deleteFeedback, setDeleteFeedback] = useState<ActionState | null>(null);
+  const [deleteFeedback, setDeleteFeedback] = useState<ActionState | null>(
+    null,
+  );
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isDeleting, startDelete] = useTransition();
+  const isDeleting = deletingId !== null;
 
   const editingRow = useMemo(() => {
     if (!editingId) return null;
@@ -306,6 +310,25 @@ export function MasterDataManager(props: Props) {
     saveAction,
     initialActionState,
   );
+
+  const entityLabel =
+    props.type === "garden"
+      ? "data kebun"
+      : props.type === "fertilizer"
+        ? "data pupuk"
+        : "data supplier";
+
+  useActionFeedback({
+    pending,
+    state,
+    loadingMessage: editingRow
+      ? `Menyimpan perubahan ${entityLabel}...`
+      : `Menambahkan ${entityLabel}...`,
+    loadingDescription:
+      "Mohon tunggu sebentar, sistem sedang memperbarui master data.",
+    successTitle: editingRow ? "Data diperbarui" : "Data ditambahkan",
+    errorTitle: "Gagal menyimpan master data",
+  });
 
   useEffect(() => {
     if (!state.message) return;
@@ -336,11 +359,12 @@ export function MasterDataManager(props: Props) {
       ? (editingRow as SupplierMasterDataRow)
       : null;
 
-  const [gardenSortState, setGardenSortState] = useState<SortState<GardenSortKey>>(null);
-  const [fertilizerSortState, setFertilizerSortState] = useState<
-    SortState<FertilizerSortKey>
-  >(null);
-  const [supplierSortState, setSupplierSortState] = useState<SortState<SupplierSortKey>>(null);
+  const [gardenSortState, setGardenSortState] =
+    useState<SortState<GardenSortKey>>(null);
+  const [fertilizerSortState, setFertilizerSortState] =
+    useState<SortState<FertilizerSortKey>>(null);
+  const [supplierSortState, setSupplierSortState] =
+    useState<SortState<SupplierSortKey>>(null);
 
   const sortedGardenRows = useMemo(() => {
     if (props.type !== "garden") {
@@ -394,34 +418,51 @@ export function MasterDataManager(props: Props) {
         : sortedSupplierRows.length;
 
   async function handleDelete(id: string) {
-    const confirmed = window.confirm(
-      "Yakin ingin menghapus data ini? Jika data sudah dipakai transaksi, penghapusan akan ditolak.",
-    );
+    const confirmed = await confirmDelete({
+      title: `Hapus ${entityLabel}?`,
+      text: "Jika data sudah dipakai transaksi, penghapusan akan ditolak oleh sistem.",
+      confirmButtonText: "Ya, hapus data",
+    });
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     setDeletingId(id);
 
-    startDelete(async () => {
-      const result =
-        props.type === "garden"
-          ? await deleteGardenAction(id)
-          : props.type === "fertilizer"
-            ? await deleteFertilizerAction(id)
-            : await deleteSupplierAction(id);
+    try {
+      const result = await withLoading(
+        () =>
+          props.type === "garden"
+            ? deleteGardenAction(id)
+            : props.type === "fertilizer"
+              ? deleteFertilizerAction(id)
+              : deleteSupplierAction(id),
+        {
+          message: `Menghapus ${entityLabel}...`,
+          description:
+            "Mohon tunggu sebentar, sistem sedang memperbarui data master.",
+        },
+      );
 
       setDeleteFeedback(result);
 
-      if (result.success) {
-        if (editingId === id) {
-          setEditingId(null);
-          formRef.current?.reset();
-        }
-        router.refresh();
+      if (!result.success) {
+        void showErrorToast(result.message, "Gagal menghapus data");
+        return;
       }
 
+      void showSuccessToast(result.message, "Data dihapus");
+
+      if (editingId === id) {
+        setEditingId(null);
+        formRef.current?.reset();
+      }
+
+      router.refresh();
+    } finally {
       setDeletingId(null);
-    });
+    }
   }
 
   return (
@@ -511,7 +552,9 @@ export function MasterDataManager(props: Props) {
               <section className="rounded-[1.8rem] border border-white/70 bg-white/62 p-4 md:p-5">
                 <SectionIntro
                   eyebrow="Data Supplier"
-                  title={editingRow ? "Edit data supplier" : "Tambah data supplier"}
+                  title={
+                    editingRow ? "Edit data supplier" : "Tambah data supplier"
+                  }
                   description="Informasi supplier yang lengkap memudahkan pemilihan pada kontrak dan monitoring follow-up pemasok."
                 />
 
@@ -559,7 +602,9 @@ export function MasterDataManager(props: Props) {
             <div className="space-y-3">
               <FormMessage
                 message={deleteFeedback?.message || state.message}
-                success={deleteFeedback ? deleteFeedback.success : state.success}
+                success={
+                  deleteFeedback ? deleteFeedback.success : state.success
+                }
               />
 
               <div className="flex flex-wrap gap-2">
@@ -594,8 +639,8 @@ export function MasterDataManager(props: Props) {
         <CardHeader>
           <CardTitle>Data Tersimpan</CardTitle>
           <CardDescription>
-            Master data di bawah ini langsung dipakai oleh modul lain di dalam sistem.
-            Klik judul kolom untuk mengurutkan data sesuai kebutuhan.
+            Master data di bawah ini langsung dipakai oleh modul lain di dalam
+            sistem. Klik judul kolom untuk mengurutkan data sesuai kebutuhan.
           </CardDescription>
         </CardHeader>
 
@@ -825,7 +870,6 @@ export function MasterDataManager(props: Props) {
                           <TableHead className="text-right">Aksi</TableHead>
                         </>
                       ) : null}
-
                       {props.type === "fertilizer" ? (
                         <>
                           <SortableTableHead
@@ -887,7 +931,6 @@ export function MasterDataManager(props: Props) {
                           <TableHead className="text-right">Aksi</TableHead>
                         </>
                       ) : null}
-
                       {props.type === "supplier" ? (
                         <>
                           <SortableTableHead
@@ -990,7 +1033,8 @@ export function MasterDataManager(props: Props) {
                           />
                           <TableHead className="text-right">Aksi</TableHead>
                         </>
-                      ) : null}                    </TableRow>
+                      ) : null}
+                    </TableRow>
                   </TableHeader>
 
                   <TableBody>
@@ -1007,7 +1051,9 @@ export function MasterDataManager(props: Props) {
                             <TableCell>
                               <StatusBadge isActive={row.isActive} />
                             </TableCell>
-                            <TableCell>{row.supplyOrderCount} pasokan</TableCell>
+                            <TableCell>
+                              {row.supplyOrderCount} pasokan
+                            </TableCell>
                             <TableCell>{formatDate(row.createdAt)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -1031,7 +1077,9 @@ export function MasterDataManager(props: Props) {
                             <TableCell>
                               <StatusBadge isActive={row.isActive} />
                             </TableCell>
-                            <TableCell>{row.supplyOrderCount} pasokan</TableCell>
+                            <TableCell>
+                              {row.supplyOrderCount} pasokan
+                            </TableCell>
                             <TableCell>{formatDate(row.createdAt)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -1060,7 +1108,9 @@ export function MasterDataManager(props: Props) {
                             <TableCell>
                               <StatusBadge isActive={row.isActive} />
                             </TableCell>
-                            <TableCell>{row.supplyOrderCount} pasokan</TableCell>
+                            <TableCell>
+                              {row.supplyOrderCount} pasokan
+                            </TableCell>
                             <TableCell>{formatDate(row.createdAt)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">

@@ -6,11 +6,11 @@ import {
   LayoutPanelTop,
   LockKeyhole,
   Save,
-  ShieldCheck,
   Trees,
 } from "lucide-react";
 import type { UserRole } from "@/src/generated/prisma";
 import { saveRolePermissionAction } from "@/lib/actions/role-permissions";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { initialActionState } from "@/lib/actions/shared";
 import {
   GARDEN_SCOPE_OPTIONS,
@@ -139,6 +139,16 @@ function RolePermissionCard({ row }: { row: ResolvedRolePermission }) {
     saveRolePermissionAction.bind(null, row.role),
     initialActionState,
   );
+
+  useActionFeedback({
+    pending,
+    state,
+    loadingMessage: `Menyimpan hak akses ${getRoleLabel(row.role)}...`,
+    loadingDescription:
+      "Mohon tunggu sebentar, sistem sedang memperbarui konfigurasi role dan fitur.",
+    successTitle: "Hak akses diperbarui",
+    errorTitle: "Gagal memperbarui hak akses",
+  });
 
   useEffect(() => {
     if (!state.success) return;

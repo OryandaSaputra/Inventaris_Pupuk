@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Save, ShieldCheck, UserPlus, X } from "lucide-react";
 import { saveUserAction } from "@/lib/actions/user-management";
 import { initialActionState } from "@/lib/actions/shared";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -119,6 +120,18 @@ export function UserForm({
     saveUserAction,
     initialActionState,
   );
+
+  useActionFeedback({
+    pending,
+    state,
+    loadingMessage: isEditing
+      ? "Menyimpan perubahan pengguna..."
+      : "Menambahkan pengguna baru...",
+    loadingDescription:
+      "Mohon tunggu sebentar, sistem sedang memperbarui data akun pengguna.",
+    successTitle: isEditing ? "Pengguna diperbarui" : "Pengguna ditambahkan",
+    errorTitle: "Gagal menyimpan pengguna",
+  });
 
   useEffect(() => {
     if (!state.success) return;

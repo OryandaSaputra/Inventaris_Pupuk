@@ -7,10 +7,10 @@ import {
   PackageCheck,
   Save,
   Sparkles,
-  Truck,
   Warehouse,
 } from "lucide-react";
 import { createDeliveryReceiptAction } from "@/lib/actions/krani";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { initialActionState } from "@/lib/actions/shared";
 import { DeliveryFormSelect } from "@/components/krani/delivery-form-select";
 import { Button } from "@/components/ui/button";
@@ -194,6 +194,16 @@ export function DeliveryForm({
     createDeliveryReceiptAction,
     initialActionState,
   );
+
+  useActionFeedback({
+    pending,
+    state,
+    loadingMessage: "Menyimpan data penerimaan...",
+    loadingDescription:
+      "Mohon tunggu sebentar, sistem sedang memperbarui histori penerimaan pupuk.",
+    successTitle: "Penerimaan disimpan",
+    errorTitle: "Gagal menyimpan penerimaan",
+  });
 
   useEffect(() => {
     if (!state.success) {
