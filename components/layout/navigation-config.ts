@@ -4,6 +4,7 @@ import {
   Database,
   Home,
   Package,
+  PackageCheck,
   Truck,
   Users,
   type LucideIcon,
@@ -64,6 +65,13 @@ const navigationByRole: Record<AppUserRole, NavigationItem[]> = {
           requiredFeature: "canAccessSupplyList",
         },
       ],
+    },
+    {
+      href: ADMIN_ROUTES.delivery,
+      label: "Input Penerimaan Pupuk",
+      shortLabel: "Penerimaan",
+      icon: PackageCheck,
+      requiredFeature: "canAccessAdminDelivery",
     },
     {
       href: ADMIN_ROUTES.masterData.root,

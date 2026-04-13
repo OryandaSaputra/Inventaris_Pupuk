@@ -145,6 +145,7 @@ exports.Prisma.RolePermissionScalarFieldEnum = {
   canAccessMasterSuppliers: 'canAccessMasterSuppliers',
   canAccessSupplierInformation: 'canAccessSupplierInformation',
   canAccessUserManagement: 'canAccessUserManagement',
+  canAccessAdminDelivery: 'canAccessAdminDelivery',
   canAccessKraniHome: 'canAccessKraniHome',
   canAccessDeliveryWorkspace: 'canAccessDeliveryWorkspace',
   createdAt: 'createdAt',

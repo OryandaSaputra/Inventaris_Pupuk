@@ -13,6 +13,7 @@ export const ADMIN_ROUTES = {
   },
   supplierInformation: "/admin/informasi-pemasok",
   gardenInformation: "/admin/informasi-kebun",
+  delivery: "/admin/penerimaan",
   users: "/admin/users",
 } as const;
 

@@ -61,11 +61,16 @@ export function LoginForm() {
       });
 
       if (result?.error) {
+        // Always hide loading on error
         hideLoading(loadingId);
         setMessage("Email atau password tidak valid.");
         setIsSubmitting(false);
         return;
       }
+
+      // Login succeeded — hide the login-specific loading before redirect.
+      // The route loading indicator will take over from here.
+      hideLoading(loadingId);
 
       router.replace("/");
       router.refresh();

@@ -2842,6 +2842,7 @@ export namespace Prisma {
     canAccessMasterSuppliers: boolean | null
     canAccessSupplierInformation: boolean | null
     canAccessUserManagement: boolean | null
+    canAccessAdminDelivery: boolean | null
     canAccessKraniHome: boolean | null
     canAccessDeliveryWorkspace: boolean | null
     createdAt: Date | null
@@ -2861,6 +2862,7 @@ export namespace Prisma {
     canAccessMasterSuppliers: boolean | null
     canAccessSupplierInformation: boolean | null
     canAccessUserManagement: boolean | null
+    canAccessAdminDelivery: boolean | null
     canAccessKraniHome: boolean | null
     canAccessDeliveryWorkspace: boolean | null
     createdAt: Date | null
@@ -2880,6 +2882,7 @@ export namespace Prisma {
     canAccessMasterSuppliers: number
     canAccessSupplierInformation: number
     canAccessUserManagement: number
+    canAccessAdminDelivery: number
     canAccessKraniHome: number
     canAccessDeliveryWorkspace: number
     createdAt: number
@@ -2901,6 +2904,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: true
     canAccessSupplierInformation?: true
     canAccessUserManagement?: true
+    canAccessAdminDelivery?: true
     canAccessKraniHome?: true
     canAccessDeliveryWorkspace?: true
     createdAt?: true
@@ -2920,6 +2924,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: true
     canAccessSupplierInformation?: true
     canAccessUserManagement?: true
+    canAccessAdminDelivery?: true
     canAccessKraniHome?: true
     canAccessDeliveryWorkspace?: true
     createdAt?: true
@@ -2939,6 +2944,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: true
     canAccessSupplierInformation?: true
     canAccessUserManagement?: true
+    canAccessAdminDelivery?: true
     canAccessKraniHome?: true
     canAccessDeliveryWorkspace?: true
     createdAt?: true
@@ -3031,6 +3037,7 @@ export namespace Prisma {
     canAccessMasterSuppliers: boolean
     canAccessSupplierInformation: boolean
     canAccessUserManagement: boolean
+    canAccessAdminDelivery: boolean
     canAccessKraniHome: boolean
     canAccessDeliveryWorkspace: boolean
     createdAt: Date
@@ -3067,6 +3074,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: boolean
     canAccessSupplierInformation?: boolean
     canAccessUserManagement?: boolean
+    canAccessAdminDelivery?: boolean
     canAccessKraniHome?: boolean
     canAccessDeliveryWorkspace?: boolean
     createdAt?: boolean
@@ -3086,6 +3094,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: boolean
     canAccessSupplierInformation?: boolean
     canAccessUserManagement?: boolean
+    canAccessAdminDelivery?: boolean
     canAccessKraniHome?: boolean
     canAccessDeliveryWorkspace?: boolean
     createdAt?: boolean
@@ -3105,6 +3114,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: boolean
     canAccessSupplierInformation?: boolean
     canAccessUserManagement?: boolean
+    canAccessAdminDelivery?: boolean
     canAccessKraniHome?: boolean
     canAccessDeliveryWorkspace?: boolean
     createdAt?: boolean
@@ -3124,13 +3134,14 @@ export namespace Prisma {
     canAccessMasterSuppliers?: boolean
     canAccessSupplierInformation?: boolean
     canAccessUserManagement?: boolean
+    canAccessAdminDelivery?: boolean
     canAccessKraniHome?: boolean
     canAccessDeliveryWorkspace?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type RolePermissionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"role" | "gardenViewScope" | "gardenEditScope" | "gardenDeleteScope" | "canAccessAdminHome" | "canAccessSupplyInput" | "canAccessSupplyList" | "canAccessMasterGardens" | "canAccessMasterFertilizers" | "canAccessMasterSuppliers" | "canAccessSupplierInformation" | "canAccessUserManagement" | "canAccessKraniHome" | "canAccessDeliveryWorkspace" | "createdAt" | "updatedAt", ExtArgs["result"]["rolePermission"]>
+  export type RolePermissionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"role" | "gardenViewScope" | "gardenEditScope" | "gardenDeleteScope" | "canAccessAdminHome" | "canAccessSupplyInput" | "canAccessSupplyList" | "canAccessMasterGardens" | "canAccessMasterFertilizers" | "canAccessMasterSuppliers" | "canAccessSupplierInformation" | "canAccessUserManagement" | "canAccessAdminDelivery" | "canAccessKraniHome" | "canAccessDeliveryWorkspace" | "createdAt" | "updatedAt", ExtArgs["result"]["rolePermission"]>
 
   export type $RolePermissionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "RolePermission"
@@ -3148,6 +3159,7 @@ export namespace Prisma {
       canAccessMasterSuppliers: boolean
       canAccessSupplierInformation: boolean
       canAccessUserManagement: boolean
+      canAccessAdminDelivery: boolean
       canAccessKraniHome: boolean
       canAccessDeliveryWorkspace: boolean
       createdAt: Date
@@ -3587,6 +3599,7 @@ export namespace Prisma {
     readonly canAccessMasterSuppliers: FieldRef<"RolePermission", 'Boolean'>
     readonly canAccessSupplierInformation: FieldRef<"RolePermission", 'Boolean'>
     readonly canAccessUserManagement: FieldRef<"RolePermission", 'Boolean'>
+    readonly canAccessAdminDelivery: FieldRef<"RolePermission", 'Boolean'>
     readonly canAccessKraniHome: FieldRef<"RolePermission", 'Boolean'>
     readonly canAccessDeliveryWorkspace: FieldRef<"RolePermission", 'Boolean'>
     readonly createdAt: FieldRef<"RolePermission", 'DateTime'>
@@ -9836,6 +9849,7 @@ export namespace Prisma {
     canAccessMasterSuppliers: 'canAccessMasterSuppliers',
     canAccessSupplierInformation: 'canAccessSupplierInformation',
     canAccessUserManagement: 'canAccessUserManagement',
+    canAccessAdminDelivery: 'canAccessAdminDelivery',
     canAccessKraniHome: 'canAccessKraniHome',
     canAccessDeliveryWorkspace: 'canAccessDeliveryWorkspace',
     createdAt: 'createdAt',
@@ -10171,6 +10185,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: BoolFilter<"RolePermission"> | boolean
     canAccessSupplierInformation?: BoolFilter<"RolePermission"> | boolean
     canAccessUserManagement?: BoolFilter<"RolePermission"> | boolean
+    canAccessAdminDelivery?: BoolFilter<"RolePermission"> | boolean
     canAccessKraniHome?: BoolFilter<"RolePermission"> | boolean
     canAccessDeliveryWorkspace?: BoolFilter<"RolePermission"> | boolean
     createdAt?: DateTimeFilter<"RolePermission"> | Date | string
@@ -10190,6 +10205,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: SortOrder
     canAccessSupplierInformation?: SortOrder
     canAccessUserManagement?: SortOrder
+    canAccessAdminDelivery?: SortOrder
     canAccessKraniHome?: SortOrder
     canAccessDeliveryWorkspace?: SortOrder
     createdAt?: SortOrder
@@ -10212,6 +10228,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: BoolFilter<"RolePermission"> | boolean
     canAccessSupplierInformation?: BoolFilter<"RolePermission"> | boolean
     canAccessUserManagement?: BoolFilter<"RolePermission"> | boolean
+    canAccessAdminDelivery?: BoolFilter<"RolePermission"> | boolean
     canAccessKraniHome?: BoolFilter<"RolePermission"> | boolean
     canAccessDeliveryWorkspace?: BoolFilter<"RolePermission"> | boolean
     createdAt?: DateTimeFilter<"RolePermission"> | Date | string
@@ -10231,6 +10248,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: SortOrder
     canAccessSupplierInformation?: SortOrder
     canAccessUserManagement?: SortOrder
+    canAccessAdminDelivery?: SortOrder
     canAccessKraniHome?: SortOrder
     canAccessDeliveryWorkspace?: SortOrder
     createdAt?: SortOrder
@@ -10256,6 +10274,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: BoolWithAggregatesFilter<"RolePermission"> | boolean
     canAccessSupplierInformation?: BoolWithAggregatesFilter<"RolePermission"> | boolean
     canAccessUserManagement?: BoolWithAggregatesFilter<"RolePermission"> | boolean
+    canAccessAdminDelivery?: BoolWithAggregatesFilter<"RolePermission"> | boolean
     canAccessKraniHome?: BoolWithAggregatesFilter<"RolePermission"> | boolean
     canAccessDeliveryWorkspace?: BoolWithAggregatesFilter<"RolePermission"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"RolePermission"> | Date | string
@@ -10779,6 +10798,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: boolean
     canAccessSupplierInformation?: boolean
     canAccessUserManagement?: boolean
+    canAccessAdminDelivery?: boolean
     canAccessKraniHome?: boolean
     canAccessDeliveryWorkspace?: boolean
     createdAt?: Date | string
@@ -10798,6 +10818,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: boolean
     canAccessSupplierInformation?: boolean
     canAccessUserManagement?: boolean
+    canAccessAdminDelivery?: boolean
     canAccessKraniHome?: boolean
     canAccessDeliveryWorkspace?: boolean
     createdAt?: Date | string
@@ -10817,6 +10838,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: BoolFieldUpdateOperationsInput | boolean
     canAccessSupplierInformation?: BoolFieldUpdateOperationsInput | boolean
     canAccessUserManagement?: BoolFieldUpdateOperationsInput | boolean
+    canAccessAdminDelivery?: BoolFieldUpdateOperationsInput | boolean
     canAccessKraniHome?: BoolFieldUpdateOperationsInput | boolean
     canAccessDeliveryWorkspace?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10836,6 +10858,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: BoolFieldUpdateOperationsInput | boolean
     canAccessSupplierInformation?: BoolFieldUpdateOperationsInput | boolean
     canAccessUserManagement?: BoolFieldUpdateOperationsInput | boolean
+    canAccessAdminDelivery?: BoolFieldUpdateOperationsInput | boolean
     canAccessKraniHome?: BoolFieldUpdateOperationsInput | boolean
     canAccessDeliveryWorkspace?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10855,6 +10878,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: boolean
     canAccessSupplierInformation?: boolean
     canAccessUserManagement?: boolean
+    canAccessAdminDelivery?: boolean
     canAccessKraniHome?: boolean
     canAccessDeliveryWorkspace?: boolean
     createdAt?: Date | string
@@ -10874,6 +10898,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: BoolFieldUpdateOperationsInput | boolean
     canAccessSupplierInformation?: BoolFieldUpdateOperationsInput | boolean
     canAccessUserManagement?: BoolFieldUpdateOperationsInput | boolean
+    canAccessAdminDelivery?: BoolFieldUpdateOperationsInput | boolean
     canAccessKraniHome?: BoolFieldUpdateOperationsInput | boolean
     canAccessDeliveryWorkspace?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10893,6 +10918,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: BoolFieldUpdateOperationsInput | boolean
     canAccessSupplierInformation?: BoolFieldUpdateOperationsInput | boolean
     canAccessUserManagement?: BoolFieldUpdateOperationsInput | boolean
+    canAccessAdminDelivery?: BoolFieldUpdateOperationsInput | boolean
     canAccessKraniHome?: BoolFieldUpdateOperationsInput | boolean
     canAccessDeliveryWorkspace?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11561,6 +11587,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: SortOrder
     canAccessSupplierInformation?: SortOrder
     canAccessUserManagement?: SortOrder
+    canAccessAdminDelivery?: SortOrder
     canAccessKraniHome?: SortOrder
     canAccessDeliveryWorkspace?: SortOrder
     createdAt?: SortOrder
@@ -11580,6 +11607,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: SortOrder
     canAccessSupplierInformation?: SortOrder
     canAccessUserManagement?: SortOrder
+    canAccessAdminDelivery?: SortOrder
     canAccessKraniHome?: SortOrder
     canAccessDeliveryWorkspace?: SortOrder
     createdAt?: SortOrder
@@ -11599,6 +11627,7 @@ export namespace Prisma {
     canAccessMasterSuppliers?: SortOrder
     canAccessSupplierInformation?: SortOrder
     canAccessUserManagement?: SortOrder
+    canAccessAdminDelivery?: SortOrder
     canAccessKraniHome?: SortOrder
     canAccessDeliveryWorkspace?: SortOrder
     createdAt?: SortOrder

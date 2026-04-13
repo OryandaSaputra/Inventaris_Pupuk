@@ -40,6 +40,11 @@ const DEFAULT_DESCRIPTION =
   "Mohon tunggu sebentar, sistem sedang menyiapkan data terbaru.";
 const ROUTE_LOADING_ID = "__route_loading__";
 
+// Maximum time (ms) route loading is allowed to stay active
+const ROUTE_LOADING_MAX_DURATION = 8000;
+// Delay (ms) after pathname changes before hiding route loading
+const ROUTE_LOADING_HIDE_DELAY = 200;
+
 const AppLoadingContext = createContext<AppLoadingContextValue | null>(null);
 
 function buildLoadingId() {
@@ -58,16 +63,23 @@ function RouteLoadingEvents({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialRenderRef = useRef(true);
+  // Track the last pathname to detect actual navigation
+  const prevPathnameRef = useRef(pathname);
 
   useEffect(() => {
+    // Skip the very first render — no navigation has happened yet
     if (initialRenderRef.current) {
       initialRenderRef.current = false;
+      prevPathnameRef.current = pathname;
       return;
     }
 
+    // Hide loading whenever pathname or searchParams change (route settled)
     const timer = window.setTimeout(() => {
       hideLoading(ROUTE_LOADING_ID);
-    }, 180);
+    }, ROUTE_LOADING_HIDE_DELAY);
+
+    prevPathnameRef.current = pathname;
 
     return () => window.clearTimeout(timer);
   }, [hideLoading, pathname, searchParams]);
@@ -130,6 +142,7 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
     return values.sort((left, right) => right.order - left.order)[0] ?? null;
   }, [entries]);
 
+  // Handle link clicks to trigger route loading indicator
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
       if (
@@ -213,6 +226,7 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
     };
   }, [showLoading]);
 
+  // Hard cap: route loading must not run longer than ROUTE_LOADING_MAX_DURATION
   useEffect(() => {
     if (!entries[ROUTE_LOADING_ID]) {
       return;
@@ -220,7 +234,7 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
 
     const fallbackTimer = window.setTimeout(() => {
       hideLoading(ROUTE_LOADING_ID);
-    }, 15000);
+    }, ROUTE_LOADING_MAX_DURATION);
 
     return () => window.clearTimeout(fallbackTimer);
   }, [entries, hideLoading]);

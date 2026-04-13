@@ -55,6 +55,7 @@ model RolePermission {
   canAccessMasterSuppliers     Boolean @default(false)
   canAccessSupplierInformation Boolean @default(false)
   canAccessUserManagement      Boolean @default(false)
+  canAccessAdminDelivery       Boolean @default(false)
 
   canAccessKraniHome         Boolean @default(false)
   canAccessDeliveryWorkspace Boolean @default(false)

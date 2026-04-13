@@ -10,6 +10,7 @@ export type FeaturePermissionKey =
   | "canAccessMasterSuppliers"
   | "canAccessSupplierInformation"
   | "canAccessUserManagement"
+  | "canAccessAdminDelivery"
   | "canAccessKraniHome"
   | "canAccessDeliveryWorkspace";
 
@@ -26,6 +27,7 @@ export type ResolvedRolePermission = {
   canAccessMasterSuppliers: boolean;
   canAccessSupplierInformation: boolean;
   canAccessUserManagement: boolean;
+  canAccessAdminDelivery: boolean;
   canAccessKraniHome: boolean;
   canAccessDeliveryWorkspace: boolean;
 };
@@ -76,6 +78,11 @@ export const ROLE_PERMISSION_FEATURES: ReadonlyArray<{
     description: "Mengelola user dan pengaturan role permission.",
   },
   {
+    key: "canAccessAdminDelivery",
+    label: "Input Penerimaan (Admin)",
+    description: "Admin dapat menginput penerimaan untuk seluruh kebun.",
+  },
+  {
     key: "canAccessKraniHome",
     label: "Home Krani",
     description: "Mengakses dashboard krani.",
@@ -109,6 +116,7 @@ const ROLE_DEFAULT_PERMISSION_MAP: Record<
     canAccessMasterSuppliers: true,
     canAccessSupplierInformation: true,
     canAccessUserManagement: true,
+    canAccessAdminDelivery: true,
     canAccessKraniHome: false,
     canAccessDeliveryWorkspace: false,
   },
@@ -124,6 +132,7 @@ const ROLE_DEFAULT_PERMISSION_MAP: Record<
     canAccessMasterSuppliers: false,
     canAccessSupplierInformation: false,
     canAccessUserManagement: false,
+    canAccessAdminDelivery: false,
     canAccessKraniHome: true,
     canAccessDeliveryWorkspace: true,
   },
@@ -139,6 +148,7 @@ const ROLE_DEFAULT_PERMISSION_MAP: Record<
     canAccessMasterSuppliers: false,
     canAccessSupplierInformation: false,
     canAccessUserManagement: false,
+    canAccessAdminDelivery: false,
     canAccessKraniHome: false,
     canAccessDeliveryWorkspace: true,
   },
@@ -277,6 +287,10 @@ export function getRouteFeatureKey(pathname: string): FeaturePermissionKey | nul
     return "canAccessSupplierInformation";
   }
 
+  if (pathname.startsWith(ADMIN_ROUTES.delivery)) {
+    return "canAccessAdminDelivery";
+  }
+
   if (pathname.startsWith(ADMIN_ROUTES.supply.input)) {
     return "canAccessSupplyInput";
   }
@@ -329,6 +343,7 @@ const roleRouteCandidates: Record<
       route: ADMIN_ROUTES.supplierInformation,
       feature: "canAccessSupplierInformation",
     },
+    { route: ADMIN_ROUTES.delivery, feature: "canAccessAdminDelivery" },
     { route: ADMIN_ROUTES.users, feature: "canAccessUserManagement" },
   ],
   KRANI_TANAMAN: [
