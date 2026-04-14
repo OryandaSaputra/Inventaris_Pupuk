@@ -1,4 +1,7 @@
 // middleware.ts
+
+export const runtime = 'nodejs';
+
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { getRateLimitKey, isRateLimited } from "@/lib/rate-limit";
