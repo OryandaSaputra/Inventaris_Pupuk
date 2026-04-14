@@ -1,3 +1,4 @@
+// auth.ts
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -5,6 +6,43 @@ import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 
 type AppRole = "ADMIN" | "KRANI_TANAMAN" | "KRANI_KEBUN";
+
+type RolePermissions = {
+  gardenViewScope: "NONE" | "ASSIGNED" | "ALL";
+  gardenEditScope: "NONE" | "ASSIGNED" | "ALL";
+  gardenDeleteScope: "NONE" | "ASSIGNED" | "ALL";
+
+  canAccessAdminHome: boolean;
+  canAccessSupplyInput: boolean;
+  canAccessSupplyList: boolean;
+  canAccessMasterGardens: boolean;
+  canAccessMasterFertilizers: boolean;
+  canAccessMasterSuppliers: boolean;
+  canAccessSupplierInformation: boolean;
+  canAccessUserManagement: boolean;
+  canAccessAdminDelivery: boolean;
+
+  canAccessKraniHome: boolean;
+  canAccessDeliveryWorkspace: boolean;
+};
+
+// Default permissions jika tidak ditemukan (aman)
+const defaultPermissions: RolePermissions = {
+  gardenViewScope: "NONE",
+  gardenEditScope: "NONE",
+  gardenDeleteScope: "NONE",
+  canAccessAdminHome: false,
+  canAccessSupplyInput: false,
+  canAccessSupplyList: false,
+  canAccessMasterGardens: false,
+  canAccessMasterFertilizers: false,
+  canAccessMasterSuppliers: false,
+  canAccessSupplierInformation: false,
+  canAccessUserManagement: false,
+  canAccessAdminDelivery: false,
+  canAccessKraniHome: false,
+  canAccessDeliveryWorkspace: false,
+};
 
 type AuthUserPayload = {
   id: string;
@@ -14,6 +52,7 @@ type AuthUserPayload = {
   isActive: boolean;
   assignedGardenId: string | null;
   assignedGardenName: string | null;
+  permissions: RolePermissions;
 };
 
 function toNullableString(value: unknown): string | null {
@@ -28,7 +67,6 @@ function toRole(value: unknown): AppRole {
   ) {
     return value;
   }
-
   return "KRANI_TANAMAN";
 }
 
@@ -49,10 +87,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       },
       authorize: async (credentials) => {
         const parsed = loginSchema.safeParse(credentials);
-
-        if (!parsed.success) {
-          return null;
-        }
+        if (!parsed.success) return null;
 
         const email = parsed.data.email.toLowerCase().trim();
 
@@ -66,26 +101,23 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             role: true,
             isActive: true,
             assignedGardenId: true,
-            assignedGarden: {
-              select: {
-                name: true,
-              },
-            },
+            assignedGarden: { select: { name: true } },
           },
         });
 
-        if (!user || !user.isActive) {
-          return null;
-        }
+        if (!user || !user.isActive) return null;
 
         const validPassword = await bcrypt.compare(
           parsed.data.password,
           user.passwordHash,
         );
 
-        if (!validPassword) {
-          return null;
-        }
+        if (!validPassword) return null;
+
+        // Ambil permissions
+        const dbPermissions = await prisma.rolePermission.findUnique({
+          where: { role: user.role },
+        });
 
         return {
           id: user.id,
@@ -95,15 +127,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           isActive: user.isActive,
           assignedGardenId: user.assignedGardenId,
           assignedGardenName: user.assignedGarden?.name ?? null,
+          permissions: dbPermissions ?? defaultPermissions,   // ← Perbaikan utama
         } satisfies AuthUserPayload;
       },
     }),
   ],
   callbacks: {
     jwt: async ({ token, user }) => {
-      if (!user) {
-        return token;
-      }
+      if (!user) return token;
 
       const authUser = user as AuthUserPayload;
 
@@ -114,6 +145,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       token.isActive = authUser.isActive;
       token.assignedGardenId = authUser.assignedGardenId;
       token.assignedGardenName = authUser.assignedGardenName;
+      token.permissions = authUser.permissions;
 
       return token;
     },
@@ -123,22 +155,13 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         session.user.id = typeof token.sub === "string" ? token.sub : "";
         session.user.role = toRole(token.role);
         session.user.isActive = token.isActive === true;
-        session.user.assignedGardenId = toNullableString(
-          token.assignedGardenId,
-        );
-        session.user.assignedGardenName = toNullableString(
-          token.assignedGardenName,
-        );
+        session.user.assignedGardenId = toNullableString(token.assignedGardenId);
+        session.user.assignedGardenName = toNullableString(token.assignedGardenName);
+        session.user.permissions = token.permissions as RolePermissions;
 
-        if (typeof token.name === "string") {
-          session.user.name = token.name;
-        }
-
-        if (typeof token.email === "string") {
-          session.user.email = token.email;
-        }
+        if (typeof token.name === "string") session.user.name = token.name;
+        if (typeof token.email === "string") session.user.email = token.email;
       }
-
       return session;
     },
   },

@@ -1,3 +1,4 @@
+// prisma/seed.ts
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -5,31 +6,23 @@ import {
   PrismaClient,
   SupplyBudgetType,
   UserRole,
+  GardenAccessScope,
 } from "../src/generated/prisma";
 
 const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) throw new Error("DATABASE_URL belum terisi di file .env");
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL belum terisi di file .env");
-}
-
-const adapter = new PrismaPg({
-  connectionString: databaseUrl,
-});
-
+const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const adminPassword = await bcrypt.hash("admin123", 10);
   const kraniPassword = await bcrypt.hash("krani123", 10);
 
-  await prisma.user.upsert({
+  // === Seed User ===
+  const admin = await prisma.user.upsert({
     where: { email: "admin@pupuk.local" },
-    update: {
-      name: "Admin Asisten Pemupukan",
-      role: UserRole.ADMIN,
-      isActive: true,
-    },
+    update: { name: "Admin Asisten Pemupukan", role: UserRole.ADMIN, isActive: true },
     create: {
       name: "Admin Asisten Pemupukan",
       email: "admin@pupuk.local",
@@ -39,13 +32,9 @@ async function main() {
     },
   });
 
-  await prisma.user.upsert({
+  const kraniTanaman = await prisma.user.upsert({
     where: { email: "krani@pupuk.local" },
-    update: {
-      name: "Krani Tanaman",
-      role: UserRole.KRANI_TANAMAN,
-      isActive: true,
-    },
+    update: { name: "Krani Tanaman", role: UserRole.KRANI_TANAMAN, isActive: true },
     create: {
       name: "Krani Tanaman",
       email: "krani@pupuk.local",
@@ -55,17 +44,78 @@ async function main() {
     },
   });
 
+  // === Seed RolePermission ===
+  await prisma.rolePermission.upsert({
+    where: { role: UserRole.ADMIN },
+    update: {},
+    create: {
+      role: UserRole.ADMIN,
+      gardenViewScope: GardenAccessScope.ALL,
+      gardenEditScope: GardenAccessScope.ALL,
+      gardenDeleteScope: GardenAccessScope.ALL,
+      canAccessAdminHome: true,
+      canAccessSupplyInput: true,
+      canAccessSupplyList: true,
+      canAccessMasterGardens: true,
+      canAccessMasterFertilizers: true,
+      canAccessMasterSuppliers: true,
+      canAccessSupplierInformation: true,
+      canAccessUserManagement: true,
+      canAccessAdminDelivery: true,
+      canAccessKraniHome: false,
+      canAccessDeliveryWorkspace: false,
+    },
+  });
+
+  await prisma.rolePermission.upsert({
+    where: { role: UserRole.KRANI_TANAMAN },
+    update: {},
+    create: {
+      role: UserRole.KRANI_TANAMAN,
+      gardenViewScope: GardenAccessScope.ASSIGNED,
+      gardenEditScope: GardenAccessScope.ASSIGNED,
+      gardenDeleteScope: GardenAccessScope.NONE,
+      canAccessAdminHome: false,
+      canAccessSupplyInput: false,
+      canAccessSupplyList: false,
+      canAccessMasterGardens: false,
+      canAccessMasterFertilizers: false,
+      canAccessMasterSuppliers: false,
+      canAccessSupplierInformation: false,
+      canAccessUserManagement: false,
+      canAccessAdminDelivery: false,
+      canAccessKraniHome: true,
+      canAccessDeliveryWorkspace: true,
+    },
+  });
+
+  await prisma.rolePermission.upsert({
+    where: { role: UserRole.KRANI_KEBUN },
+    update: {},
+    create: {
+      role: UserRole.KRANI_KEBUN,
+      gardenViewScope: GardenAccessScope.ASSIGNED,
+      gardenEditScope: GardenAccessScope.ASSIGNED,
+      gardenDeleteScope: GardenAccessScope.NONE,
+      canAccessAdminHome: false,
+      canAccessSupplyInput: false,
+      canAccessSupplyList: false,
+      canAccessMasterGardens: false,
+      canAccessMasterFertilizers: false,
+      canAccessMasterSuppliers: false,
+      canAccessSupplierInformation: false,
+      canAccessUserManagement: false,
+      canAccessAdminDelivery: false,
+      canAccessKraniHome: false,
+      canAccessDeliveryWorkspace: true,
+    },
+  });
+
+  // === Seed Master Data (Kebun, Pupuk, Supplier) ===
   const gardenA = await prisma.garden.upsert({
     where: { name: "Kebun A" },
-    update: {
-      code: "KBA",
-      isActive: true,
-    },
-    create: {
-      name: "Kebun A",
-      code: "KBA",
-      isActive: true,
-    },
+    update: { code: "KBA", isActive: true },
+    create: { name: "Kebun A", code: "KBA", isActive: true },
   });
 
   const fertilizerA = await prisma.fertilizerType.upsert({
@@ -80,86 +130,9 @@ async function main() {
     create: { name: "PT Pupuk Makmur", isActive: true },
   });
 
-  const admin = await prisma.user.findUniqueOrThrow({
-    where: { email: "admin@pupuk.local" },
-  });
-
-  const quantityOrdered = 5000;
-  const unitPrice = 2500;
-  const freightCost = 350000;
-  const totalCost = quantityOrdered * unitPrice + freightCost;
-  const ppnAmount = totalCost * 0.11;
-  const grandTotal = totalCost + ppnAmount;
-
-  const order = await prisma.supplyOrder.upsert({
-    where: {
-      gardenId_fertilizerTypeId_sp2bjNumber: {
-        gardenId: gardenA.id,
-        fertilizerTypeId: fertilizerA.id,
-        sp2bjNumber: "SP2BJ-001/2026",
-      },
-    },
-    update: {
-      supplierId: supplierA.id,
-      contractStartDate: new Date("2026-01-10"),
-      contractEndDate: new Date("2026-04-20"),
-      quantityOrdered,
-      budgetType: SupplyBudgetType.EKSPLOITASI,
-      unitPrice,
-      freightCost,
-      totalCost,
-      ppnAmount,
-      grandTotal,
-      createdById: admin.id,
-    },
-    create: {
-      gardenId: gardenA.id,
-      fertilizerTypeId: fertilizerA.id,
-      supplierId: supplierA.id,
-      sp2bjNumber: "SP2BJ-001/2026",
-      contractStartDate: new Date("2026-01-10"),
-      contractEndDate: new Date("2026-04-20"),
-      quantityOrdered,
-      budgetType: SupplyBudgetType.EKSPLOITASI,
-      unitPrice,
-      freightCost,
-      totalCost,
-      ppnAmount,
-      grandTotal,
-      createdById: admin.id,
-    },
-  });
-
-  await prisma.deliveryReceipt.upsert({
-    where: { id: "seed-delivery-1" },
-    update: {
-      supplyOrderId: order.id,
-      licensePlate: "BK1234AA",
-      receivedDate: new Date("2026-02-12"),
-      quantityDelivered: 1500,
-      sackCount: 30,
-      createdById: admin.id,
-    },
-    create: {
-      id: "seed-delivery-1",
-      supplyOrderId: order.id,
-      licensePlate: "BK1234AA",
-      receivedDate: new Date("2026-02-12"),
-      quantityDelivered: 1500,
-      sackCount: 30,
-      createdById: admin.id,
-    },
-  });
-
-  console.log("Seed berhasil dijalankan.");
+  console.log("✅ Seed berhasil dijalankan (termasuk RolePermission).");
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (error) => {
-    console.error("Seed gagal:", error);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+  .then(async () => { await prisma.$disconnect(); })
+  .catch(async (e) => { console.error(e); await prisma.$disconnect(); process.exit(1); });

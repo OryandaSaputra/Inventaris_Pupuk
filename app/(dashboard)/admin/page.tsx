@@ -13,6 +13,7 @@ import {
   Siren,
   Truck,
 } from "lucide-react";
+
 import { ContractPriorityMatrix } from "@/components/charts/contract-priority-matrix";
 import { DeliveryTrendChart } from "@/components/charts/delivery-trend-chart";
 import { SupplierPerformanceChart } from "@/components/charts/supplier-performance-chart";
@@ -29,12 +30,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+
 import {
   getAdminDashboardData,
   getSupplyOrderTableData,
 } from "@/lib/data/admin";
 import { ADMIN_ROUTES } from "@/lib/routes";
 import { cn, formatNumber } from "@/lib/utils";
+
+// ← TAMBAHAN BARU: Proteksi halaman
+import { requireAdmin } from "@/lib/auth/protected";
 
 const STATUS_PRIORITY = {
   MERAH: 0,
@@ -66,7 +71,12 @@ function HeroMetric({
           : "border-white/70 bg-white/60";
 
   return (
-    <div className={cn("rounded-3xl border p-4 shadow-[0_20px_36px_-30px_rgba(15,56,45,0.24)]", toneClassName)}>
+    <div
+      className={cn(
+        "rounded-3xl border p-4 shadow-[0_20px_36px_-30px_rgba(15,56,45,0.24)]",
+        toneClassName,
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
@@ -106,7 +116,12 @@ function OverviewItem({
             : "border-white/70 bg-white/60";
 
   return (
-    <div className={cn("rounded-2xl border px-4 py-3 shadow-[0_18px_34px_-30px_rgba(15,56,45,0.22)]", toneClassName)}>
+    <div
+      className={cn(
+        "rounded-2xl border px-4 py-3 shadow-[0_18px_34px_-30px_rgba(15,56,45,0.22)]",
+        toneClassName,
+      )}
+    >
       <p className="text-[11px] uppercase tracking-[0.16em] text-slate-600">
         {label}
       </p>
@@ -138,7 +153,12 @@ function PrioritySummaryCard({
           : "border-sky-200/85 bg-sky-500/[0.09]";
 
   return (
-    <div className={cn("rounded-3xl border p-4 shadow-[0_18px_34px_-30px_rgba(15,56,45,0.22)]", toneClassName)}>
+    <div
+      className={cn(
+        "rounded-3xl border p-4 shadow-[0_18px_34px_-30px_rgba(15,56,45,0.22)]",
+        toneClassName,
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-600">
@@ -158,21 +178,26 @@ function PrioritySummaryCard({
 }
 
 export default async function AdminHomePage() {
+  // ← PROTEKSI BARU: Hanya admin dengan izin canAccessAdminHome yang boleh masuk
+  const session = await requireAdmin();
+
   const [data, rows] = await Promise.all([
     getAdminDashboardData(),
     getSupplyOrderTableData(),
   ]);
 
   const attentionRows = rows
-    .filter((row) => row.notificationStatus === "MERAH" || row.notificationStatus === "KUNING")
+    .filter(
+      (row) =>
+        row.notificationStatus === "MERAH" ||
+        row.notificationStatus === "KUNING",
+    )
     .sort((left, right) => {
       const statusDiff =
         STATUS_PRIORITY[left.notificationStatus] -
         STATUS_PRIORITY[right.notificationStatus];
 
-      if (statusDiff !== 0) {
-        return statusDiff;
-      }
+      if (statusDiff !== 0) return statusDiff;
 
       if (left.remainingContractDays !== right.remainingContractDays) {
         return left.remainingContractDays - right.remainingContractDays;
@@ -185,7 +210,9 @@ export default async function AdminHomePage() {
   const completedRows = rows.filter((row) => row.isCompleted).length;
   const endedRows = rows.filter((row) => row.isContractEnded).length;
   const overdueRows = rows.filter((row) => row.isOverdue).length;
-  const safeRows = rows.filter((row) => row.notificationStatus === "NORMAL").length;
+  const safeRows = rows.filter(
+    (row) => row.notificationStatus === "NORMAL",
+  ).length;
 
   const topOutstandingOrder = rows
     .filter((row) => row.remainingQuantity > 0)
@@ -198,31 +225,28 @@ export default async function AdminHomePage() {
       title: "SP2BJ Aktif",
       value: String(data.activeOrders),
       description:
-        "Kontrak yang masih berjalan dan masih memiliki outstanding volume untuk dipantau setiap hari.",
+        "Kontrak yang masih berjalan dan masih memiliki outstanding volume.",
       meta: `${data.totalOrders} total`,
       tone: "info" as const,
     },
     {
       title: "Rencana Pasokan",
       value: formatNumber(data.outstandingQuantity),
-      description:
-        "Total sisa volume yang belum terpenuhi dari seluruh kontrak pasokan yang sudah tercatat.",
+      description: "Total sisa volume yang belum terpenuhi.",
       meta: "Perlu dipenuhi",
       tone: "warning" as const,
     },
     {
       title: "Kontrak Overdue",
       value: String(attentionRows.length),
-      description:
-        "Kontrak merah dan kuning yang perlu tindakan cepat atau pemantauan lebih ketat.",
+      description: "Kontrak merah dan kuning yang perlu tindakan cepat.",
       meta: `${overdueRows} overdue`,
       tone: "danger" as const,
     },
     {
       title: "Realisasi Pasokan",
       value: `${data.deliveryProgressPercentage}%`,
-      description:
-        "Persentase realisasi volume terkirim terhadap total volume kontrak yang sudah diinput.",
+      description: "Persentase realisasi volume terkirim.",
       meta: `${formatNumber(data.totalDeliveredQuantity)} terkirim`,
       tone: "success" as const,
     },
@@ -232,9 +256,8 @@ export default async function AdminHomePage() {
     <AppShell pathname="/admin">
       <div className="app-page">
         <PageHeader
-          eyebrow="Admin Dashboard"
+          eyebrow={`Admin Dashboard • ${session.user.name}`}
           title="Monitoring Pasokan Pupuk"
-          // description="Tampilan dirapikan agar prioritas kerja lebih cepat terbaca: progres realisasi, kontrak kritis, pemasok terbaik, dan fokus operasional harian semuanya terkumpul dalam satu halaman yang lebih modern."
           action={
             <div className="flex flex-wrap gap-2">
               <Link
@@ -252,7 +275,6 @@ export default async function AdminHomePage() {
             </div>
           }
         />
-
         <section>
           <Card className="relative overflow-hidden border-white/65 bg-white/62 shadow-[0_30px_90px_-42px_rgba(15,56,45,0.3)] backdrop-blur-[30px]">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_center_right,rgba(250,204,21,0.12),transparent_18%)]" />
@@ -267,11 +289,16 @@ export default async function AdminHomePage() {
                     </div>
 
                     <h2 className="mt-4 text-2xl font-semibold leading-tight text-slate-900 md:text-3xl xl:text-[2.15rem]">
-                      Ringkasan pasokan pupuk menampilkan kontrak aktif, progres penerimaan, dan titik prioritas tindak lanjut.
+                      Ringkasan pasokan pupuk menampilkan kontrak aktif, progres
+                      penerimaan, dan titik prioritas tindak lanjut.
                     </h2>
 
                     <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-Halaman ini membantu memantau kondisi pasokan secara menyeluruh, mulai dari jumlah kontrak yang tercatat, realisasi penerimaan, status keterlambatan, hingga supplier dengan performa terbaik dan outstanding yang masih perlu diselesaikan.
+                      Halaman ini membantu memantau kondisi pasokan secara
+                      menyeluruh, mulai dari jumlah kontrak yang tercatat,
+                      realisasi penerimaan, status keterlambatan, hingga
+                      supplier dengan performa terbaik dan outstanding yang
+                      masih perlu diselesaikan.
                     </p>
                   </div>
 
@@ -350,7 +377,9 @@ Halaman ini membantu memantau kondisi pasokan secara menyeluruh, mulai dari juml
                       {topOutstandingOrder.sp2bjNumber}
                     </strong>
                     <span className="text-slate-500">•</span>
-                    <span>{formatNumber(topOutstandingOrder.remainingQuantity)}</span>
+                    <span>
+                      {formatNumber(topOutstandingOrder.remainingQuantity)}
+                    </span>
                   </div>
                 ) : null}
               </div>
